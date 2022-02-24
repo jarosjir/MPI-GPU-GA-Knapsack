@@ -24,24 +24,39 @@
 #
 # 
 # Created on 08 June 2012, 00:00 PM
+# Last midification on 21 February  2022, 19:14
 #
 
 
 # Environment
 CC=nvcc
 CXX=nvcc
-CXXFLAGS= -arch=sm_20 -Xptxas=-v -m64 -O3 
+
+CUDA_ARCH = --generate-code arch=compute_50,code=sm_50 \
+            --generate-code arch=compute_52,code=sm_52 \
+            --generate-code arch=compute_53,code=sm_53 \
+            --generate-code arch=compute_60,code=sm_60 \
+            --generate-code arch=compute_61,code=sm_61 \
+            --generate-code arch=compute_62,code=sm_62 \
+            --generate-code arch=compute_70,code=sm_70 \
+            --generate-code arch=compute_72,code=sm_72 \
+            --generate-code arch=compute_75,code=sm_75 \
+            --generate-code arch=compute_80,code=sm_80 \
+            --generate-code arch=compute_86,code=sm_86
+
+
+CXXFLAGS=  -Xptxas=-v -m64 -O3  --device-c ${CUDA_ARCH}
 TARGET=mpi_gpuga_knapsack
 
 #---------------------------------------------------------------------
 # CHECK FLAGS FOR MPI
-LDFLAGS= -L/usr/lib/openmpi/lib -lmpi -lmpi_cxx
+LDFLAGS= -L${EBROOTOPENMPI} -lmpi -lmpi_cxx
 #-----------------------------------------------------------------------
 
 #----------------------------------------------------------------
 # CHANGE PATHS to CUDA!!
 
-CXXINCLUDE=-I/usr/local/NVIDIA_GPU_Computing_SDK/shared/inc -I/usr/local/NVIDIA_GPU_Computing_SDK/C/common/inc/ 
+CXXINCLUDE=-I${EBROOTCUDA}/include -I${EBROOTCUDA}/samples/common/inc 
 #----------------------------------------------------------------
 
 all:		$(TARGET)	
