@@ -1,5 +1,5 @@
 /*
- * File:        GPU_Statistics.cu
+ * File:        Statistics.cu
  * Author:      Jiri Jaros
  * Affiliation: Brno University of Technology
  *              Faculty of Information Technology
@@ -31,8 +31,8 @@
 #include <malloc.h>
 #include <mpi.h>
 
-#include "GPU_Statistics.h"
-#include "CUDA_Kernels.h"
+#include "Statistics.h"
+#include "CUDAKernels.h"
 
 
 //----------------------------------------------------------------------------//

@@ -34,7 +34,7 @@
 #include <getopt.h>
 
 #include "Parameters.h"
-#include "CUDA_Kernels.h"
+#include "CUDAKernels.h"
 
 //----------------------------------------------------------------------------//
 //                              Definitions                                   //

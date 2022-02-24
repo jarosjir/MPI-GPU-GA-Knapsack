@@ -45,6 +45,8 @@ CUDA_ARCH = --generate-code arch=compute_50,code=sm_50 \
             --generate-code arch=compute_86,code=sm_86
 
 
+
+
 CXXFLAGS=  -Xptxas=-v -m64 -O3  --device-c ${CUDA_ARCH}
 TARGET=mpi_gpuga_knapsack
 
@@ -61,8 +63,8 @@ CXXINCLUDE=-I${EBROOTCUDA}/include -I${EBROOTCUDA}/samples/common/inc
 
 all:		$(TARGET)	
 
-$(TARGET):	main.o CUDA_Kernels.o GPU_Statistics.o Parameters.o GPU_Population.o GPU_Evolution.o GlobalKnapsackData.o
-	$(CXX) $(LDFLAGS) main.o CUDA_Kernels.o GPU_Statistics.o Parameters.o GPU_Population.o GPU_Evolution.o GlobalKnapsackData.o -lm -o $@ $(LIBS) 
+$(TARGET):	main.o CUDAKernels.o Statistics.o Parameters.o Population.o Evolution.o GlobalKnapsackData.o
+	$(CXX) $(LDFLAGS) main.o CUDAKernels.o Statistics.o Parameters.o Population.o Evolution.o GlobalKnapsackData.o -lm -o $@ $(LIBS) 
 
 
 

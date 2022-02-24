@@ -1,5 +1,5 @@
 /*
- * File:        GPU_Evolution.h
+ * File:        Evolution.h
  * Author:      Jiri Jaros
  * Affiliation: Brno University of Technology
  *              Faculty of Information Technology
@@ -26,13 +26,13 @@
  * Created on 08 June     2012, 00:00 PM
  * Revised on 24 February 2022, 16:27 PM
  */
-#ifndef TGPU_EVOLUTION_H
-#define	TGPU_EVOLUTION_H
+#ifndef EVOLUTION_H
+#define EVOLUTION_H
 
 #include "Parameters.h"
 
-#include "GPU_Population.h"
-#include "GPU_Statistics.h"
+#include "Population.h"
+#include "Statistics.h"
 #include "GlobalKnapsackData.h"
 
 

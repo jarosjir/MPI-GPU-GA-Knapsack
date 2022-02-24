@@ -28,8 +28,8 @@
  * Created on 30 March 2012, 00:00 PM
  */
 
-#ifndef TPARAMETERS_H
-#define	TPARAMETERS_H
+#ifndef PARAMETERS_H
+#define PARAMETERS_H
 
 #include <string>
 

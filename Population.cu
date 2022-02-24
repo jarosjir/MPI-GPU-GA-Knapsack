@@ -1,5 +1,5 @@
 /*
- * File:        GPU_Population.cu
+ * File:        Population.cu
  * Author:      Jiri Jaros
  * Affiliation: Brno University of Technology
  *              Faculty of Information Technology
@@ -32,8 +32,8 @@
 #include <stdexcept>
 #include <sstream>
 
-#include "GPU_Population.h"
-#include "CUDA_Kernels.h"
+#include "Population.h"
+#include "CUDAKernels.h"
 
 
 

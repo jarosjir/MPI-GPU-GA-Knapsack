@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <mpi.h>
 
-#include "GPU_Evolution.h"
+#include "Evolution.h"
 #include "Parameters.h"
 
 

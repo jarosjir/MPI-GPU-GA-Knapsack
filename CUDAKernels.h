@@ -1,5 +1,5 @@
 /*
- * File:        CUDA_Kernels.h
+ * File:        CUDAKernels.h
  * Author:      Jiri Jaros
  * Affiliation: Brno University of Technology
  *              Faculty of Information Technology
@@ -31,8 +31,8 @@
 #define	CUDA_KERNELS_H
 
 
-#include "GPU_Population.h"
-#include "GPU_Statistics.h"
+#include "Population.h"
+#include "Statistics.h"
 #include "GlobalKnapsackData.h"
 
 /**

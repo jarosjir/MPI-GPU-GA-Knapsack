@@ -1,5 +1,5 @@
 /*
- * File:        GPU_Evolution.cu
+ * File:        Evolution.cu
  * Author:      Jiri Jaros
  * Affiliation: Brno University of Technology
  *              Faculty of Information Technology
@@ -32,9 +32,9 @@
 #include <mpi.h>
 #include <sys/time.h>
 
-#include "GPU_Evolution.h"
-#include "GPU_Statistics.h"
-#include "CUDA_Kernels.h"
+#include "Evolution.h"
+#include "Statistics.h"
+#include "CUDAKernels.h"
 #include "Parameters.h"
 
 using namespace std;

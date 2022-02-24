@@ -1,5 +1,5 @@
 /* 
- * File:        GPU_Population.h
+ * File:        Population.h
  * Author:      Jiri Jaros
  * Affiliation: Brno University of Technology
  *              Faculty of Information Technology
@@ -27,8 +27,8 @@
  */
 
 
-#ifndef TGPU_POPULATION_H
-#define	TGPU_POPULATION_H
+#ifndef POPULATION_H
+#define POPULATION_H
 
 #include <string>
 

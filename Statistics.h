@@ -1,5 +1,5 @@
 /* 
- * File:        GPU_Statistics.h
+ * File:        Statistics.h
  * Author:      Jiri Jaros
  * Affiliation: Brno University of Technology
  *              Faculty of Information Technology
@@ -26,12 +26,12 @@
  * Created on 08 June 2012, 00:00 PM
  */
 
-#ifndef GPU_STATISTICS_H
-#define	GPU_STATISTICS_H
+#ifndef STATISTICS_H
+#define STATISTICS_H
 
 
 #include "Parameters.h"
-#include "GPU_Population.h"
+#include "Population.h"
 #include "GlobalKnapsackData.h"
 
 
