@@ -82,7 +82,7 @@ public:
     // calculate global statistics
     void   Calculate              (TGPU_Population * Population, bool PrintBest);    
     // print best individual -- only on MASTER node --//
-    string GetBestIndividualStr   (TKnapsackData * GlobalKnapsackData);
+    string GetBestIndividualStr   (KnapsackData * GlobalKnapsackData);
     
     TGPU_Statistics();
     virtual ~TGPU_Statistics();

@@ -52,17 +52,17 @@
  */
 TGPU_Statistics::TGPU_Statistics(){
 
-    TParameters*  Params = TParameters::GetInstance();
+    const Parameters& Params = Parameters::getInstance();
 
     GlobalDerivedStat       = NULL;
     ReceiveStatDataBuffer   = NULL;
     ReceiveIndividualBuffer = NULL;
 
     //-- for MPI collection function --//
-    if (Params->IslandIdx() == 0) {
+    if (Params.getIslandIdx() == 0) {
       GlobalDerivedStat          = (TDerivedStats *)       memalign(16, sizeof(TDerivedStats));
-      ReceiveStatDataBuffer      = (TStatDataToExchange *) memalign(16, sizeof(TStatDataToExchange) * Params->IslandCount());
-      ReceiveIndividualBuffer    = (TGene *)               memalign(16, sizeof(TGene)  * Params->ChromosomeSize()* Params->IslandCount());
+      ReceiveStatDataBuffer      = (TStatDataToExchange *) memalign(16, sizeof(TStatDataToExchange) * Params.getIslandCount());
+      ReceiveIndividualBuffer    = (TGene *)               memalign(16, sizeof(TGene)  * Params.getChromosomeSize()* Params.getIslandCount());
     }
 
     // Allocate CUDA memory
@@ -105,20 +105,20 @@ TGPU_Statistics::~TGPU_Statistics(){
  * @param Global knapsack data
  * @retur Best individual in from of a sting
  */
-string TGPU_Statistics::GetBestIndividualStr(TKnapsackData * GlobalKnapsackData){
+string TGPU_Statistics::GetBestIndividualStr(KnapsackData * GlobalKnapsackData){
 
     stringstream  S;
 
-    TParameters * Params = TParameters::GetInstance();
+    const Parameters& Params = Parameters::getInstance();
 
 
-    int  BlockCount    = GlobalKnapsackData->OriginalNumberOfItems / Params->IntBlockSize();
-    bool IsNotFullBlock = (GlobalKnapsackData->OriginalNumberOfItems % Params->IntBlockSize()) != 0;
+    int  BlockCount    = GlobalKnapsackData->originalNumberOfItems / Params.getIntBlockSize();
+    bool IsNotFullBlock = (GlobalKnapsackData->originalNumberOfItems % Params.getIntBlockSize()) != 0;
 
         // Convert by eight bits
     for (int BlockID=0; BlockID < BlockCount; BlockID++){
 
-     for (int BitID = 0; BitID < Params->IntBlockSize() -1; BitID++ ) {
+     for (int BitID = 0; BitID < Params.getIntBlockSize() -1; BitID++ ) {
          char c = ((LocalBestIndividual[BlockID] & (1 << BitID)) == 0) ? '0' : '1';
          S << c;
          if (BitID % 8 ==7) S << " ";
@@ -130,7 +130,7 @@ string TGPU_Statistics::GetBestIndividualStr(TKnapsackData * GlobalKnapsackData)
 
     // Convert the remainder
     if (IsNotFullBlock) {
-        int NumOfRestItems = GlobalKnapsackData->OriginalNumberOfItems  - (BlockCount * Params->IntBlockSize());
+        int NumOfRestItems = GlobalKnapsackData->originalNumberOfItems  - (BlockCount * Params.getIntBlockSize());
         for (int BitID = 0; BitID < NumOfRestItems; BitID++) {
              char c =  ((LocalBestIndividual[BlockCount] & (1 << BitID)) == 0) ? '0' : '1';
              S << c;
@@ -153,7 +153,7 @@ string TGPU_Statistics::GetBestIndividualStr(TKnapsackData * GlobalKnapsackData)
  */
 void TGPU_Statistics::Calculate(TGPU_Population * Population, bool PrintBest){
 
-    TParameters *Params = TParameters::GetInstance();
+    const Parameters& Params = Parameters::getInstance();
 
     // Calculate local statistics
     CalculateLocalStats(Population,  PrintBest);
@@ -168,12 +168,12 @@ void TGPU_Statistics::Calculate(TGPU_Population * Population, bool PrintBest){
     if (PrintBest) {
 
         //-- Collect Individuals --//
-        MPI_Gather(LocalBestIndividual     ,Params->ChromosomeSize(), MPI_UNSIGNED,
-                   ReceiveIndividualBuffer ,Params->ChromosomeSize(), MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+        MPI_Gather(LocalBestIndividual     ,Params.getChromosomeSize(), MPI_UNSIGNED,
+                   ReceiveIndividualBuffer ,Params.getChromosomeSize(), MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     }
 
     // only master calculates the global statistics
-    if (Params->IslandIdx() == 0) CalculateGlobalStatistics(PrintBest);
+    if (Params.getIslandIdx() == 0) CalculateGlobalStatistics(PrintBest);
 
 }// end of Calculate
 //------------------------------------------------------------------------------
@@ -197,7 +197,7 @@ void TGPU_Statistics::AllocateCudaMemory(){
 
 
     // Allocate Host basic structure
-   cudaHostAlloc((void**)&LocalBestIndividual, sizeof(TGene) * TParameters::GetInstance()->ChromosomeSize()
+   cudaHostAlloc((void**)&LocalBestIndividual, sizeof(TGene) * Parameters::getInstance().getChromosomeSize()
                            ,cudaHostAllocDefault);
 
 
@@ -271,7 +271,7 @@ void TGPU_Statistics::CalculateLocalStats(TGPU_Population * Population, bool Pri
 
     // Run the CUDA kernel to calculate statistics
     CalculateStatistics
-            <<<TParameters::GetInstance()->GetGPU_SM_Count() * 2, BLOCK_SIZE >>>
+            <<<Parameters::getInstance().getNumberOfDeviceSMs() * 2, BLOCK_SIZE >>>
             (LocalDeviceStatData, Population->DeviceData);
 
 
@@ -291,7 +291,7 @@ void TGPU_Statistics::CalculateLocalStats(TGPU_Population * Population, bool Pri
  */
 void TGPU_Statistics::CopyOut(TGPU_Population * Population, bool PrintBest){
 
-    TParameters * Params = TParameters::GetInstance();
+
 
     //-- Copy 4 statistics values --//
     cudaMemcpy(HostStatData, LocalDeviceStatData, sizeof(TStatDataToExchange), cudaMemcpyDeviceToHost);
@@ -322,10 +322,10 @@ void TGPU_Statistics::CalculateGlobalStatistics(bool PrintBest){
  HostStatData->SumFitness  = ReceiveStatDataBuffer[0].SumFitness;
  HostStatData->Sum2Fitness = ReceiveStatDataBuffer[0].Sum2Fitness;
 
- TParameters * Params = TParameters::GetInstance();
+ const Parameters& Params = Parameters::getInstance();
 
   // Numeric statistics
-  for (int i = 1 ;  i < Params->IslandCount(); i++){
+  for (int i = 1 ;  i < Params.getIslandCount(); i++){
 
 
       if (HostStatData->MaxFitness < ReceiveStatDataBuffer[i].MaxFitness) {
@@ -344,8 +344,8 @@ void TGPU_Statistics::CalculateGlobalStatistics(bool PrintBest){
   }
 
 
- GlobalDerivedStat->AvgFitness = HostStatData->SumFitness / (Params->PopulationSize() * Params->IslandCount());
- GlobalDerivedStat->Divergence = sqrtf(fabsf( (HostStatData->Sum2Fitness / (Params->PopulationSize() * Params->IslandCount()) -
+ GlobalDerivedStat->AvgFitness = HostStatData->SumFitness / (Params.getPopulationSize() * Params.getIslandCount());
+ GlobalDerivedStat->Divergence = sqrtf(fabsf( (HostStatData->Sum2Fitness / (Params.getPopulationSize() * Params.getIslandCount()) -
                                          GlobalDerivedStat->AvgFitness * GlobalDerivedStat->AvgFitness))
          );
 

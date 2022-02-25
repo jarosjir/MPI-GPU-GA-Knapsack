@@ -56,7 +56,9 @@ static const int MPI_TAG_DATA  = 100;
 /*
  * Constructor of the class
  */
-TGPU_Evolution::TGPU_Evolution(int argc, char **argv)  {
+TGPU_Evolution::TGPU_Evolution(int argc, char **argv)
+  : Params(Parameters::getInstance())
+{
 
     MasterPopulation       = NULL;
     OffspringPopulation    = NULL;
@@ -70,27 +72,27 @@ TGPU_Evolution::TGPU_Evolution(int argc, char **argv)  {
 
 
     // Create parameter class
-    Params = TParameters::GetInstance();
+
     // Parse command line
-    Params->LoadParametersFromCommandLine(argc,argv);
+    Params.parseCommandline(argc,argv);
 
     // Load data from disk
-    GlobalData.LoadFromFile();
+    GlobalData.loadFromFile();
 
     // Create populations on GPU
-    MasterPopulation       = new TGPU_Population(Params->PopulationSize(), Params->ChromosomeSize());
-    OffspringPopulation    = new TGPU_Population(Params->OffspringPopulationSize(), Params->ChromosomeSize());
+    MasterPopulation       = new TGPU_Population(Params.getPopulationSize(), Params.getChromosomeSize());
+    OffspringPopulation    = new TGPU_Population(Params.getOffspringPopulationSize(), Params.getChromosomeSize());
 
 
     // Create buffers on GPU
-    GPU_EmigrantsToSend     = new TGPU_Population(Params->EmigrantCount(), Params->ChromosomeSize());
-    GPU_EmigrantsToReceive  = new TGPU_Population(Params->EmigrantCount(), Params->ChromosomeSize());
+    GPU_EmigrantsToSend     = new TGPU_Population(Params.getEmigrantCount(), Params.getChromosomeSize());
+    GPU_EmigrantsToReceive  = new TGPU_Population(Params.getEmigrantCount(), Params.getChromosomeSize());
     // Create buffers on CPU
-    CPU_EmigrantsToSend     = new TCPU_Population(Params->EmigrantCount(), Params->ChromosomeSize());
-    CPU_EmigrantsToReceive  = new TCPU_Population(Params->EmigrantCount(), Params->ChromosomeSize());
+    CPU_EmigrantsToSend     = new TCPU_Population(Params.getEmigrantCount(), Params.getChromosomeSize());
+    CPU_EmigrantsToReceive  = new TCPU_Population(Params.getEmigrantCount(), Params.getChromosomeSize());
 
     // Create Vector lock
-    //MigrationVectorLock    = new TGPU_Vector_Lock(Params->PopulationSize());
+    //MigrationVectorLock    = new TGPU_Vector_Lock(Params.PopulationSize());
 
     // Create statistics
     GPUStatistics          = new TGPU_Statistics();
@@ -153,7 +155,7 @@ void TGPU_Evolution::InitSeed() {
   gettimeofday(&tp1, NULL);
 
 
-  FRandomSeed = (tp1.tv_sec / (Params->IslandIdx()+1)) * tp1.tv_usec;
+  FRandomSeed = (tp1.tv_sec / (Params.getIslandIdx()+1)) * tp1.tv_usec;
 
 };// end of InitSeed
 //------------------------------------------------------------------------------
@@ -168,25 +170,25 @@ void TGPU_Evolution::Initialize(){
     FActGeneration = 0;
 
     // Store parameters on GPU and print them out
-    Params->StoreParamsOnGPU();
-    Params->PrintAllParameters();
+    Params.copyToDevice();
+    Params.printOutAllParameters();
 
 
 
     //-- set elements count --//
-    int Elements = Params->ChromosomeSize() * Params->PopulationSize();
+    int Elements = Params.getChromosomeSize() * Params.getPopulationSize();
 
 
     //-- Initialize population --//
     FirstPopulationGenerationKernel
-            <<<Params->GetGPU_SM_Count() * 2, BLOCK_SIZE>>>
+            <<<Params.getNumberOfDeviceSMs() * 2, BLOCK_SIZE>>>
             (MasterPopulation->DeviceData, GetSeed());
 
     dim3 Blocks;
     dim3 Threads;
 
     Blocks.x = 1;
-    Blocks.y = (Params->PopulationSize() / (CHR_PER_BLOCK) +1);
+    Blocks.y = (Params.getPopulationSize() / (CHR_PER_BLOCK) +1);
     Blocks.z = 1;
 
 
@@ -197,7 +199,7 @@ void TGPU_Evolution::Initialize(){
 
     CalculateKnapsackFintess
             <<<Blocks, Threads>>>
-                (MasterPopulation->DeviceData, GlobalData.DeviceData);
+                (MasterPopulation->DeviceData, GlobalData.getDeviceData());
 
 
 }// end of TGPU_Evolution
@@ -223,19 +225,19 @@ void TGPU_Evolution::RunEvolutionCycle(){
 
 
     // Evaluate generations
-    for (FActGeneration = 1; FActGeneration < Params->NumOfGenerations(); FActGeneration++) {
+    for (FActGeneration = 1; FActGeneration < Params.getNumOfGenerations(); FActGeneration++) {
 
           //------------- Migration -----------//
-/*          if (FActGeneration % Params->MigrationInterval() == 0) {
+/*          if (FActGeneration % Params.MigrationInterval() == 0) {
               Migrate();
           }*/
 
 
           //-------------Selection -----------//
           Blocks.x = 1;
-          Blocks.y = (Params->OffspringPopulationSize() % (CHR_PER_BLOCK << 1)  == 0) ?
-                            Params->OffspringPopulationSize() / (CHR_PER_BLOCK << 1)  :
-                            Params->OffspringPopulationSize() / (CHR_PER_BLOCK << 1) + 1;
+          Blocks.y = (Params.getOffspringPopulationSize() % (CHR_PER_BLOCK << 1)  == 0) ?
+                            Params.getOffspringPopulationSize() / (CHR_PER_BLOCK << 1)  :
+                            Params.getOffspringPopulationSize() / (CHR_PER_BLOCK << 1) + 1;
 
           Blocks.z = 1;
 
@@ -248,24 +250,24 @@ void TGPU_Evolution::RunEvolutionCycle(){
           //----------- Evaluation ---------//
 
           Blocks.x = 1;
-          Blocks.y = (Params->OffspringPopulationSize() % (CHR_PER_BLOCK)  == 0) ?
-                            Params->OffspringPopulationSize() / (CHR_PER_BLOCK)  :
-                            Params->OffspringPopulationSize() / (CHR_PER_BLOCK) + 1;
+          Blocks.y = (Params.getOffspringPopulationSize() % (CHR_PER_BLOCK)  == 0) ?
+                            Params.getOffspringPopulationSize() / (CHR_PER_BLOCK)  :
+                            Params.getOffspringPopulationSize() / (CHR_PER_BLOCK) + 1;
           Blocks.z = 1;
 
 
           CalculateKnapsackFintess
                 <<<Blocks, Threads>>>
-                    (OffspringPopulation->DeviceData, GlobalData.DeviceData);
+                    (OffspringPopulation->DeviceData, GlobalData.getDeviceData());
 
 
           //----------- Replacement ---------//
 
 
           Blocks.x = 1;
-          Blocks.y = (Params->PopulationSize() % (CHR_PER_BLOCK)  == 0) ?
-                            Params->PopulationSize() / (CHR_PER_BLOCK)  :
-                            Params->PopulationSize() / (CHR_PER_BLOCK) + 1;
+          Blocks.y = (Params.getPopulationSize() % (CHR_PER_BLOCK)  == 0) ?
+                            Params.getPopulationSize() / (CHR_PER_BLOCK)  :
+                            Params.getPopulationSize() / (CHR_PER_BLOCK) + 1;
           Blocks.z = 1;
 
 
@@ -276,18 +278,18 @@ void TGPU_Evolution::RunEvolutionCycle(){
 
 
 
-          TCPU_Population pop(Params->PopulationSize(), Params->ChromosomeSize());
+          TCPU_Population pop(Params.getPopulationSize(), Params.getChromosomeSize());
 
 
           MasterPopulation->CopyOut(pop.HostData);
           //printf("First idx %f\n", pop.HostData->Fitness[0]);
 
-          /*GPUStatistics->Calculate(MasterPopulation, Params->GetPrintBest());
-          printf("Island %d, Best Fitness %f\n", Params->IslandIdx(), GPUStatistics->GetMaxFitness());*/
+          /*GPUStatistics->Calculate(MasterPopulation, Params.GetPrintBest());
+          printf("Island %d, Best Fitness %f\n", Params.getIslandIdx(), GPUStatistics->GetMaxFitness());*/
 
 
-          if (FActGeneration % Params->StatisticsInterval() == 0){
-              GPUStatistics->Calculate(MasterPopulation, Params->GetPrintBest());
+          if (FActGeneration % Params.getStatisticsInterval() == 0){
+              GPUStatistics->Calculate(MasterPopulation, Params.getPrintBest());
 
 
 
@@ -298,7 +300,7 @@ void TGPU_Evolution::RunEvolutionCycle(){
                         GPUStatistics->GetAvgFitness(), GPUStatistics->GetDivergence());
 
 
-                  if (Params->GetPrintBest())  printf("%s\n", GPUStatistics->GetBestIndividualStr(GlobalData.HostData).c_str());
+                  if (Params.getPrintBest())  printf("%s\n", GPUStatistics->GetBestIndividualStr(GlobalData.getHostData()).c_str());
               }// isMaster
           }//FActGen...
 
@@ -344,14 +346,14 @@ void TGPU_Evolution::Migrate(){
     int Target;
     int Source;
 
-    Target = (Params->IslandIdx() + 1) % Params->IslandCount(); // Send to the right
-    if (Params->IslandIdx() == 0) Source = Params->IslandCount()-1;
-    else Source = Params->IslandIdx() - 1;                      // Send to the left
+    Target = (Params.getIslandIdx() + 1) % Params.getIslandCount(); // Send to the right
+    if (Params.getIslandIdx() == 0) Source = Params.getIslandCount()-1;
+    else Source = Params.getIslandIdx() - 1;                      // Send to the left
 
 
     // Receive immigrants
-    MPI_Irecv(CPU_EmigrantsToReceive->HostData->Fitness   ,Params->EmigrantCount()                           , MPI_FLOAT   , Source, MPI_TAG_DATA, MPI_COMM_WORLD, &request[2]);
-    MPI_Irecv(CPU_EmigrantsToReceive->HostData->Population,Params->EmigrantCount() * Params->ChromosomeSize(), MPI_UNSIGNED, Source, MPI_TAG_DATA, MPI_COMM_WORLD, &request[3]);
+    MPI_Irecv(CPU_EmigrantsToReceive->HostData->Fitness   ,Params.getEmigrantCount()                           , MPI_FLOAT   , Source, MPI_TAG_DATA, MPI_COMM_WORLD, &request[2]);
+    MPI_Irecv(CPU_EmigrantsToReceive->HostData->Population,Params.getEmigrantCount() * Params.getChromosomeSize(), MPI_UNSIGNED, Source, MPI_TAG_DATA, MPI_COMM_WORLD, &request[3]);
 
 
 
@@ -360,9 +362,9 @@ void TGPU_Evolution::Migrate(){
         Threads.z = 1;
 
         Blocks.x  = 1;
-        Blocks.y  = (Params->EmigrantCount() % CHR_PER_BLOCK  == 0) ?
-                     Params->EmigrantCount() / CHR_PER_BLOCK :
-                     Params->EmigrantCount() / CHR_PER_BLOCK  + 1;
+        Blocks.y  = (Params.getEmigrantCount() % CHR_PER_BLOCK  == 0) ?
+                     Params.getEmigrantCount() / CHR_PER_BLOCK :
+                     Params.getEmigrantCount() / CHR_PER_BLOCK  + 1;
         Blocks.z  = 1;
 
 
@@ -376,8 +378,8 @@ void TGPU_Evolution::Migrate(){
 
 
   // Send emigrants
-  MPI_Isend(CPU_EmigrantsToSend->HostData->Fitness      ,Params->EmigrantCount()                           , MPI_FLOAT   , Target, MPI_TAG_DATA, MPI_COMM_WORLD, &request[0]);
-  MPI_Isend(CPU_EmigrantsToSend->HostData->Population   ,Params->EmigrantCount() * Params->ChromosomeSize(), MPI_UNSIGNED, Target, MPI_TAG_DATA, MPI_COMM_WORLD, &request[1]);
+  MPI_Isend(CPU_EmigrantsToSend->HostData->Fitness      ,Params.getEmigrantCount()                           , MPI_FLOAT   , Target, MPI_TAG_DATA, MPI_COMM_WORLD, &request[0]);
+  MPI_Isend(CPU_EmigrantsToSend->HostData->Population   ,Params.getEmigrantCount() * Params.getChromosomeSize(), MPI_UNSIGNED, Target, MPI_TAG_DATA, MPI_COMM_WORLD, &request[1]);
 
   MPI_Waitall(NumOfMessages, request, status);
 

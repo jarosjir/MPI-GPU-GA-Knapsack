@@ -44,18 +44,18 @@ class TGPU_Evolution{
 public:
              // Class constructors
              TGPU_Evolution(int argc, char **argv);
-             TGPU_Evolution() {};
+             TGPU_Evolution() : Params(Parameters::getInstance()) {};
     virtual ~TGPU_Evolution();
 
     // Run evolution
     void     Run();
 
     // Is this the master node?
-    bool     IsMaster() {return Params->IslandIdx() == 0;};
+    bool     IsMaster() {return Params.getIslandIdx() == 0;};
 
 
 protected:
-    TParameters * Params;               // Parameters of evolution
+    Parameters&   Params;               // Parameters of evolution
     int           FActGeneration;       // Actual generation
     unsigned int  FRandomSeed;          // Random Seed
 
@@ -72,7 +72,7 @@ protected:
 
     TGPU_Statistics*  GPUStatistics;           // Statistics over GA process
 
-    TGlobalKnapsackData GlobalData;            // Global data of knapsack
+    GlobalKnapsackData GlobalData;            // Global data of knapsack
 
 
     void         InitSeed();

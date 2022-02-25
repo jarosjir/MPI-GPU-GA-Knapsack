@@ -45,7 +45,7 @@
 //--------------------------------------------------- Definitions ----------------------------------------------------//
 //--------------------------------------------------------------------------------------------------------------------//
 
-__constant__  TEvolutionParameters GPU_EvolutionParameters;
+__constant__  EvolutionParameters gpuEvolutionParameters;
 
 /**
  * @class Semaphore
@@ -165,8 +165,8 @@ inline __device__ void MutationBitFlip(TGene& GeneOffspring1, TGene& GeneOffspri
                                        unsigned int RandomValue1,unsigned int RandomValue2, int BitID);
 
 // Reduction kernels
-__device__ void HalfWarpReducePrice (volatile TPriceType * sdata, int tid);
-__device__ void HalfWarpReduceWeight(volatile TWeightType* sdata, int tid);
+__device__ void HalfWarpReducePrice (volatile PriceType * sdata, int tid);
+__device__ void HalfWarpReduceWeight(volatile WeightType* sdata, int tid);
 __device__ void HalfWarpReduceGene(volatile TGene* sdata, int tid);
 
 
@@ -216,7 +216,7 @@ inline __device__ void TwoRandomINTs(RNG_2x32::ctr_type *RandomValues,
  */
 inline __device__ int  GetIndex(unsigned int ChromosomeIdx, unsigned int GeneIdx){
 
-    return (ChromosomeIdx * GPU_EvolutionParameters.ChromosomeSize + GeneIdx);
+    return (ChromosomeIdx * gpuEvolutionParameters.chromosomeSize + GeneIdx);
 
 }// end of GetIndex
 //------------------------------------------------------------------------------
@@ -228,7 +228,7 @@ inline __device__ int  GetIndex(unsigned int ChromosomeIdx, unsigned int GeneIdx
  * @param tid    - idx of thread
  *
  */
-__device__ void HalfWarpReducePrice(volatile TPriceType * sdata, int tid){
+__device__ void HalfWarpReducePrice(volatile PriceType * sdata, int tid){
     if (tid < WARP_SIZE/2) {
         sdata[tid] += sdata[tid + 16];
         sdata[tid] += sdata[tid + 8];
@@ -248,7 +248,7 @@ __device__ void HalfWarpReducePrice(volatile TPriceType * sdata, int tid){
  *
  *
  */
-__device__ void HalfWarpReduceWeight(volatile TWeightType* sdata, int tid){
+__device__ void HalfWarpReduceWeight(volatile WeightType* sdata, int tid){
     if (tid < WARP_SIZE/2) {
         sdata[tid] += sdata[tid + 16];
         sdata[tid] += sdata[tid + 8];
@@ -361,8 +361,8 @@ inline __device__ void MutationBitFlip(TGene& GeneOffspring1, TGene& GeneOffspri
 
   //GeneOffspring1 ^= ((unsigned int)(RandomValue1 < GPU_EvolutionParameters.MutationUINTBoundary) << BitID);
   //GeneOffspring2 ^= ((unsigned int)(RandomValue2 < GPU_EvolutionParameters.MutationUINTBoundary) << BitID);
-  if (RandomValue1 < GPU_EvolutionParameters.MutationUINTBoundary) GeneOffspring1 ^= (1 << BitID);
-  if (RandomValue2 < GPU_EvolutionParameters.MutationUINTBoundary) GeneOffspring2 ^= (1 << BitID);
+  if (RandomValue1 < gpuEvolutionParameters.mutationUintBoundary) GeneOffspring1 ^= (1 << BitID);
+  if (RandomValue2 < gpuEvolutionParameters.mutationUintBoundary) GeneOffspring2 ^= (1 << BitID);
 
 
 
@@ -460,7 +460,7 @@ __global__ void GeneticManipulationKernel(TPopulationData * ParentsData, TPopula
 
 
 
-    if (ChromosomeIdx >= GPU_EvolutionParameters.OffspringPopulationSize) return;
+    if (ChromosomeIdx >= gpuEvolutionParameters.offspringPopulationSize) return;
 
     __shared__ int  Parent1_Idx  [CHR_PER_BLOCK];
     __shared__ int  Parent2_Idx  [CHR_PER_BLOCK];
@@ -478,7 +478,7 @@ __global__ void GeneticManipulationKernel(TPopulationData * ParentsData, TPopula
 
         counter.incr();
         RandomValues = rng_4x32(counter, key);
-        CrossoverFlag[threadIdx.x] = RandomValues.v[0] < GPU_EvolutionParameters.CrossoverUINTBoundary;
+        CrossoverFlag[threadIdx.x] = RandomValues.v[0] < gpuEvolutionParameters.crossoverUintBoundary;
     }
 
 
@@ -488,7 +488,7 @@ __global__ void GeneticManipulationKernel(TPopulationData * ParentsData, TPopula
     //------------------------------------------------------------------------//
 
     //-- Go through two chromosomes and do uniform crossover and mutation--//
-    while (GeneIdx < GPU_EvolutionParameters.ChromosomeSize){
+    while (GeneIdx < gpuEvolutionParameters.chromosomeSize){
         TGene GeneParent1 = ParentsData->Population[GetIndex(Parent1_Idx[threadIdx.y], GeneIdx)];
         TGene GeneParent2 = ParentsData->Population[GetIndex(Parent2_Idx[threadIdx.y], GeneIdx)];
 
@@ -509,7 +509,7 @@ __global__ void GeneticManipulationKernel(TPopulationData * ParentsData, TPopula
 
 
         //-- mutation --//
-        for (int BitID = 0; BitID < GPU_EvolutionParameters.IntBlockSize; BitID+=2){
+        for (int BitID = 0; BitID < gpuEvolutionParameters.intBlockSize; BitID+=2){
 
             counter.incr();
             RandomValues = rng_4x32(counter, key);
@@ -551,13 +551,13 @@ __global__ void ReplacementKernel(TPopulationData * ParentsData, TPopulationData
     RNG_2x32::ctr_type RandomValues;
     __shared__ unsigned int OffspringIdx_SHM[CHR_PER_BLOCK];
 
-    if (ChromosomeIdx >= GPU_EvolutionParameters.PopulationSize) return;
+    if (ChromosomeIdx >= gpuEvolutionParameters.populationSize) return;
 
 
     //-- select offspring --//
     if (threadIdx.x == 0){
        TwoRandomINTs(&RandomValues, ChromosomeIdx, RandomSeed);
-       OffspringIdx_SHM[threadIdx.y]  = RandomValues.v[0] % (GPU_EvolutionParameters.OffspringPopulationSize);
+       OffspringIdx_SHM[threadIdx.y]  = RandomValues.v[0] % (gpuEvolutionParameters.offspringPopulationSize);
 
     }
 
@@ -568,7 +568,7 @@ __global__ void ReplacementKernel(TPopulationData * ParentsData, TPopulationData
     if (ParentsData->Fitness[ChromosomeIdx] < OffspringData->Fitness[OffspringIdx_SHM[threadIdx.y]]){
 
         //-- copy data --//
-        while (GeneIdx < GPU_EvolutionParameters.ChromosomeSize){
+        while (GeneIdx < gpuEvolutionParameters.chromosomeSize){
             ParentsData->Population[GetIndex(ChromosomeIdx, GeneIdx)] = OffspringData->Population[GetIndex(OffspringIdx_SHM[threadIdx.y], GeneIdx)];
             GeneIdx +=  WARP_SIZE;
         }
@@ -620,7 +620,7 @@ __global__ void CalculateStatistics(TStatDataToExchange * StatisticsData, TPopul
   TFitness FitnessValue;
 
   //-- Reduction to shared memory --//
-  while (i < GPU_EvolutionParameters.PopulationSize){
+  while (i < gpuEvolutionParameters.populationSize){
 
       FitnessValue = PopData->Fitness[i];
       if (FitnessValue > shared_Max[threadIdx.x]){
@@ -697,15 +697,15 @@ __global__ void CalculateStatistics(TStatDataToExchange * StatisticsData, TPopul
  * @param GlobalData
  *
  */
-__global__ void CalculateKnapsackFintess(TPopulationData * PopData, TKnapsackData * GlobalData){
+__global__ void CalculateKnapsackFintess(TPopulationData * PopData, KnapsackData * GlobalData){
 
 
-    __shared__ TPriceType  PriceGlobalData_SHM [WARP_SIZE];
-    __shared__ TWeightType WeightGlobalData_SHM[WARP_SIZE];
+    __shared__ PriceType  PriceGlobalData_SHM [WARP_SIZE];
+    __shared__ WeightType WeightGlobalData_SHM[WARP_SIZE];
 
 
-    __shared__ TPriceType  PriceValues_SHM [CHR_PER_BLOCK] [WARP_SIZE];
-    __shared__ TWeightType WeightValues_SHM[CHR_PER_BLOCK] [WARP_SIZE];
+    __shared__ PriceType  PriceValues_SHM [CHR_PER_BLOCK] [WARP_SIZE];
+    __shared__ WeightType WeightValues_SHM[CHR_PER_BLOCK] [WARP_SIZE];
 
 
     int GeneInBlockIdx = threadIdx.x;
@@ -717,18 +717,18 @@ __global__ void CalculateKnapsackFintess(TPopulationData * PopData, TKnapsackDat
 
     //------------------------------------------------------//
 
-    PriceValues_SHM [threadIdx.y] [threadIdx.x] = TPriceType(0);
-    WeightValues_SHM[threadIdx.y] [threadIdx.x] = TWeightType(0);
+    PriceValues_SHM [threadIdx.y] [threadIdx.x] = PriceType(0);
+    WeightValues_SHM[threadIdx.y] [threadIdx.x] = WeightType(0);
 
 
 
     //-- Calculate weight and price in parallel
-    for (int IntBlockIdx = 0; IntBlockIdx < GPU_EvolutionParameters.ChromosomeSize; IntBlockIdx++){
+    for (int IntBlockIdx = 0; IntBlockIdx < gpuEvolutionParameters.chromosomeSize; IntBlockIdx++){
 
                 //--------------Load Data -------------//
         if (threadIdx.y == 0) {
-                PriceGlobalData_SHM [GeneInBlockIdx] = GlobalData->ItemPrice [IntBlockIdx * GPU_EvolutionParameters.IntBlockSize + GeneInBlockIdx];
-                WeightGlobalData_SHM[GeneInBlockIdx] = GlobalData->ItemWeight[IntBlockIdx * GPU_EvolutionParameters.IntBlockSize + GeneInBlockIdx];
+                PriceGlobalData_SHM [GeneInBlockIdx] = GlobalData->itemPrice [IntBlockIdx * gpuEvolutionParameters.intBlockSize + GeneInBlockIdx];
+                WeightGlobalData_SHM[GeneInBlockIdx] = GlobalData->itemWeight[IntBlockIdx * gpuEvolutionParameters.intBlockSize + GeneInBlockIdx];
         }
 
         ActGene = ((PopData->Population[GetIndex(ChromosomeIdx, IntBlockIdx)]) >> GeneInBlockIdx) & TGene(1);
@@ -761,10 +761,10 @@ __global__ void CalculateKnapsackFintess(TPopulationData * PopData, TKnapsackDat
         TFitness result = TFitness(PriceValues_SHM [threadIdx.y][0]);
 
 
-        if (WeightValues_SHM[threadIdx.y][0] > GlobalData->KnapsackCapacity){
-            TFitness Penalty = (WeightValues_SHM[threadIdx.y][0] - GlobalData->KnapsackCapacity);
+        if (WeightValues_SHM[threadIdx.y][0] > GlobalData->knapsackCapacity){
+            TFitness Penalty = (WeightValues_SHM[threadIdx.y][0] - GlobalData->knapsackCapacity);
 
-            result = result  - GlobalData->MaxPriceWightRatio * Penalty;
+            result = result  - GlobalData->maxPriceWightRatio * Penalty;
             if (result < 0 ) result = TFitness(0);
             //result = TFitness(0);
         }
@@ -804,7 +804,7 @@ __device__ int FindTheBestLocation(int threadIdx1D, TPopulationData * ParentsDat
 
 
   //-- Reduction to shared memory --//
-  while (i < GPU_EvolutionParameters.PopulationSize){
+  while (i < gpuEvolutionParameters.populationSize){
 
       FitnessValue = ParentsData->Fitness[i];
       if (FitnessValue > shared_Max[threadIdx1D]){
@@ -857,7 +857,7 @@ __global__ void SelectEmigrantsKernel(TPopulationData * ParentsData, TPopulation
     __shared__ int     EmigrantIdx_SHM[CHR_PER_BLOCK];
 
 
-    if (ChromosomeIdx >= GPU_EvolutionParameters.EmigrantCount) return;
+    if (ChromosomeIdx >= gpuEvolutionParameters.emigrantCount) return;
 
 
 
@@ -887,7 +887,7 @@ __global__ void SelectEmigrantsKernel(TPopulationData * ParentsData, TPopulation
 
     //------------------------ data copy -------------------------------------//
 
-    while (GeneIdx < GPU_EvolutionParameters.ChromosomeSize){
+    while (GeneIdx < gpuEvolutionParameters.chromosomeSize){
         EmigrantsToSend->Population[GetIndex(ChromosomeIdx, GeneIdx)] = ParentsData->Population[GetIndex(EmigrantIdx_SHM[threadIdx.y], GeneIdx)];
         GeneIdx +=  WARP_SIZE;
     }
@@ -919,7 +919,7 @@ __global__ void AcceptEmigrantsKernel(TPopulationData * ParentsData, TPopulation
     __shared__ int     ParrentToReplaceIdx_SHM[CHR_PER_BLOCK];
     volatile   int*    ParentToRelaceIdx = ParrentToReplaceIdx_SHM;
 
-    if (ChromosomeIdx >= GPU_EvolutionParameters.EmigrantCount) return;
+    if (ChromosomeIdx >= gpuEvolutionParameters.emigrantCount) return;
 
 
     //------------------------ selection -------------------------------------//
@@ -941,7 +941,7 @@ __global__ void AcceptEmigrantsKernel(TPopulationData * ParentsData, TPopulation
     if (ParentsData->Fitness[ParentToRelaceIdx[threadIdx.y]] < EmigrantsToReceive->Fitness[ChromosomeIdx]){
 
         //-- copy data --//
-        while (GeneIdx < GPU_EvolutionParameters.ChromosomeSize){
+        while (GeneIdx < gpuEvolutionParameters.chromosomeSize){
             ParentsData->Population[GetIndex(ParentToRelaceIdx[threadIdx.y], GeneIdx)] = EmigrantsToReceive->Population[GetIndex(ChromosomeIdx, GeneIdx)];
             GeneIdx +=  WARP_SIZE;
         }

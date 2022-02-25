@@ -74,7 +74,7 @@ __global__ void CalculateFintessOneMax(TPopulationData * PopData);
 
 
 // Calculate Knapsack fitness
-__global__ void CalculateKnapsackFintess(TPopulationData * PopData, TKnapsackData * GlobalData);
+__global__ void CalculateKnapsackFintess(TPopulationData * PopData, KnapsackData * GlobalData);
 
 
 
