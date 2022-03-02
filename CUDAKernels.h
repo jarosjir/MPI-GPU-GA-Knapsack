@@ -56,7 +56,7 @@ __global__ void ReplacementKernel(TPopulationData * ParentsData, TPopulationData
 
 
 // Calculate statistics
-__global__ void CalculateStatistics(TStatDataToExchange * StatisticsData, TPopulationData * PopData);
+__global__ void CalculateStatistics(StatisticsData * StatisticsData, TPopulationData * PopData);
 
 // Select individuals to migration
 __global__ void SelectEmigrantsKernel(TPopulationData * ParentsData, TPopulationData * EmigrantsToSend, unsigned int RandomSeed);

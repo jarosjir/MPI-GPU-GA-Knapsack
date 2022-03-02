@@ -95,7 +95,7 @@ TGPU_Evolution::TGPU_Evolution(int argc, char **argv)
     //MigrationVectorLock    = new TGPU_Vector_Lock(Params.PopulationSize());
 
     // Create statistics
-    GPUStatistics          = new TGPU_Statistics();
+    GPUStatistics          = new Statistics();
 
     FActGeneration = 0;
     InitSeed();
@@ -289,18 +289,18 @@ void TGPU_Evolution::RunEvolutionCycle(){
 
 
           if (FActGeneration % Params.getStatisticsInterval() == 0){
-              GPUStatistics->Calculate(MasterPopulation, Params.getPrintBest());
+              GPUStatistics->calculate(MasterPopulation, Params.getPrintBest());
 
 
 
               if (IsMaster()) {
                     printf("Generation %6d, BestIsland %d, MaxFitness %6f, MinFitness %6f, AvgFitness %6f, Diver %6f \n",
-                        FActGeneration, GPUStatistics->GetBestIslandIdx(),
-                        GPUStatistics->GetMaxFitness(), GPUStatistics->GetMinFitness(),
-                        GPUStatistics->GetAvgFitness(), GPUStatistics->GetDivergence());
+                        FActGeneration, GPUStatistics->getBestIslandIdx(),
+                        GPUStatistics->getMaxFitness(), GPUStatistics->getMinFitness(),
+                        GPUStatistics->getAvgFitness(), GPUStatistics->getDivergence());
 
 
-                  if (Params.getPrintBest())  printf("%s\n", GPUStatistics->GetBestIndividualStr(GlobalData.getHostData()).c_str());
+                  if (Params.getPrintBest())  printf("%s\n", GPUStatistics->getBestIndividualStr(GlobalData.getHostData()).c_str());
               }// isMaster
           }//FActGen...
 
@@ -311,13 +311,13 @@ void TGPU_Evolution::RunEvolutionCycle(){
 
 
 
-        GPUStatistics->Calculate(MasterPopulation, true);
+        GPUStatistics->calculate(MasterPopulation, true);
         if (IsMaster()){
               printf("--------------------------------------------------------------------------------------------------\n");
               printf("FinalBestIsland %d, FinalMaxFitness %6f, FinalMinFitness %6f, FinalAvgFitness %6f, FinalDiver %6f \n",
-                        GPUStatistics->GetBestIslandIdx(),
-                        GPUStatistics->GetMaxFitness(), GPUStatistics->GetMinFitness(),
-                        GPUStatistics->GetAvgFitness(), GPUStatistics->GetDivergence());
+                        GPUStatistics->getBestIslandIdx(),
+                        GPUStatistics->getMaxFitness(), GPUStatistics->getMinFitness(),
+                        GPUStatistics->getAvgFitness(), GPUStatistics->getDivergence());
 
                 //printf("%s\n", GPUStatistics->GetBestIndividualStr(GlobalData.HostData).c_str());
         }// is master

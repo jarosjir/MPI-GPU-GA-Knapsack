@@ -593,7 +593,7 @@ __global__ void ReplacementKernel(TPopulationData * ParentsData, TPopulationData
  * @param GPULock
  *
  */
-__global__ void CalculateStatistics(TStatDataToExchange * StatisticsData, TPopulationData * PopData){
+__global__ void CalculateStatistics(StatisticsData * StatisticsData, TPopulationData * PopData){
 
   int i      = threadIdx.x + blockDim.x*blockIdx.x;
   int stride = blockDim.x*gridDim.x;
@@ -665,20 +665,20 @@ __global__ void CalculateStatistics(TStatDataToExchange * StatisticsData, TPopul
   {
     semaphore.acquire();
 
-    if (StatisticsData->MaxFitness < shared_Max[threadIdx.x])
+    if (StatisticsData->maxFitness < shared_Max[threadIdx.x])
     {
-      StatisticsData->MaxFitness = shared_Max[threadIdx.x];
-      StatisticsData->IndexBest  = shared_Max_Idx[threadIdx.x];
+      StatisticsData->maxFitness = shared_Max[threadIdx.x];
+      StatisticsData->indexBest  = shared_Max_Idx[threadIdx.x];
     }
 
-    if (StatisticsData->MinFitness > shared_Min[threadIdx.x])
+    if (StatisticsData->minFitness > shared_Min[threadIdx.x])
     {
-      StatisticsData->MinFitness = shared_Min[threadIdx.x];
+      StatisticsData->minFitness = shared_Min[threadIdx.x];
     }
 
     semaphore.release();
-    atomicAdd(&(StatisticsData->SumFitness),  shared_Sum [threadIdx.x]);
-    atomicAdd(&(StatisticsData->Sum2Fitness), shared_Sum2[threadIdx.x]);
+    atomicAdd(&(StatisticsData->sumFitness),  shared_Sum [threadIdx.x]);
+    atomicAdd(&(StatisticsData->sum2Fitness), shared_Sum2[threadIdx.x]);
   }
 
 }// end of CalculateStatistics

@@ -70,7 +70,7 @@ protected:
     TCPU_Population*  CPU_EmigrantsToSend;     // Buffer for individuals to send
     TCPU_Population*  CPU_EmigrantsToReceive;  // Buffer for individuals to receive
 
-    TGPU_Statistics*  GPUStatistics;           // Statistics over GA process
+    Statistics*  GPUStatistics;           // Statistics over GA process
 
     GlobalKnapsackData GlobalData;            // Global data of knapsack
 

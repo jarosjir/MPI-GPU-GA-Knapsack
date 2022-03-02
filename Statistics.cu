@@ -1,7 +1,7 @@
-/*
- * File:        Statistics.cu
- * Author:      Jiri Jaros
- * Affiliation: Brno University of Technology
+/**
+ * @file        Statistics.cu
+ * @author      Jiri Jaros
+ *              Brno University of Technology
  *              Faculty of Information Technology
  *
  *              and
@@ -9,346 +9,304 @@
  *              The Australian National University
  *              ANU College of Engineering & Computer Science
  *
- * Email:       jarosjir@fit.vutbr.cz
- * Web:         www.fit.vutbr.cz/~jarosjir
+ *              jarosjir@fit.vutbr.cz
+ *              www.fit.vutbr.cz/~jarosjir
  *
- * Comments:    Implementation file of the GA statistics
+ * @brief       Implementation file of the GA statistics
  *              This class maintains and collects GA statistics
  *
+ * @date        08 June 2012 2012, 00:00 (created)
+ *              01 March     2022, 22:02 (revised)
  *
- * License:     This source code is distribute under OpenSource GNU GPL license
+ * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
- *              If using this code, please consider citation of related papers
- *              at http://www.fit.vutbr.cz/~jarosjir/pubs.php
+ * This source code is distribute under OpenSouce GNU GPL license.
+ * If using this code, please consider citation of related papers
+ * at http://www.fit.vutbr.cz/~jarosjir/pubs.php
  *
- *
- *
- * Created on 08 June     2012, 00:00 PM
- * Revised on 24 February 2022, 16:26 PM
  */
 
-#include <sstream>
-#include <malloc.h>
 #include <mpi.h>
+#include <helper_cuda.h>
+#include <malloc.h>
 
 #include "Statistics.h"
 #include "CUDAKernels.h"
 
 
-//----------------------------------------------------------------------------//
-//                              Definitions                                   //
-//----------------------------------------------------------------------------//
+//--------------------------------------------------------------------------------------------------------------------//
+//--------------------------------------------------- Definitions ----------------------------------------------------//
+//--------------------------------------------------------------------------------------------------------------------//
 
 
-//----------------------------------------------------------------------------//
-//                       TGPU_Statistics Implementation                       //
-//                              public methods                                //
-//----------------------------------------------------------------------------//
+//--------------------------------------------------------------------------------------------------------------------//
+//------------------------------------------------- Public methods ---------------------------------------------------//
+//--------------------------------------------------------------------------------------------------------------------//
 
 
-/*
+/**
  * Constructor of the class
- *
  */
-TGPU_Statistics::TGPU_Statistics(){
+Statistics::Statistics()
+{
+  const Parameters& Params = Parameters::getInstance();
 
-    const Parameters& Params = Parameters::getInstance();
+  mGlobalDerivedStat       = nullptr;
+  mReceiveStatDataBuffer   = nullptr;
+  mReceiveIndividualBuffer = nullptr;
 
-    GlobalDerivedStat       = NULL;
-    ReceiveStatDataBuffer   = NULL;
-    ReceiveIndividualBuffer = NULL;
+ // for MPI collection function
+  if (Params.getIslandIdx() == 0)
+  {
+    mGlobalDerivedStat       = (DerivedStats *)   memalign(64, sizeof(DerivedStats));
+    mReceiveStatDataBuffer   = (StatisticsData *) memalign(64, sizeof(StatisticsData) * Params.getIslandCount());
+    mReceiveIndividualBuffer = (TGene *)          memalign(64, sizeof(TGene)
+                                                                * Params.getChromosomeSize()* Params.getIslandCount());
+  }
 
-    //-- for MPI collection function --//
-    if (Params.getIslandIdx() == 0) {
-      GlobalDerivedStat          = (TDerivedStats *)       memalign(16, sizeof(TDerivedStats));
-      ReceiveStatDataBuffer      = (TStatDataToExchange *) memalign(16, sizeof(TStatDataToExchange) * Params.getIslandCount());
-      ReceiveIndividualBuffer    = (TGene *)               memalign(16, sizeof(TGene)  * Params.getChromosomeSize()* Params.getIslandCount());
-    }
+  // Allocate CUDA memory
+  allocateCudaMemory();
+}// end of Statistics
+//----------------------------------------------------------------------------------------------------------------------
 
-    // Allocate CUDA memory
-    AllocateCudaMemory();
-
-}// end of TGPU_Population
-//------------------------------------------------------------------------------
-
-
-/*
+/**
  * Destructor of the class
- *
  */
-TGPU_Statistics::~TGPU_Statistics(){
+Statistics::~Statistics()
+{
+  //  Free host memory
+  if (mGlobalDerivedStat)
+  {
+    free(mGlobalDerivedStat);
+    mGlobalDerivedStat = nullptr;
+  }
 
-    //-- Free host memory --//
-    if (GlobalDerivedStat){
-        free(GlobalDerivedStat);
-        GlobalDerivedStat = NULL;
-    }
+  if (mReceiveStatDataBuffer)
+  {
+    free(mReceiveStatDataBuffer);
+    mReceiveStatDataBuffer = nullptr;
+  }
 
-    if (ReceiveStatDataBuffer){
-        free(ReceiveStatDataBuffer);
-        ReceiveStatDataBuffer = NULL;
-    }
-    if (ReceiveIndividualBuffer){
-        free(ReceiveIndividualBuffer);
-        ReceiveIndividualBuffer = NULL;
-    }
+  if (mReceiveIndividualBuffer)
+  {
+    free(mReceiveIndividualBuffer);
+    mReceiveIndividualBuffer = nullptr;
+  }
 
-    FreeCudaMemory();
+  freeCudaMemory();
 
-}// end of ~TGPU_Population
-//------------------------------------------------------------------------------
+}// end of Statistics
+//----------------------------------------------------------------------------------------------------------------------
 
-
-/*
- * Print best individual as a string
- *
- * @param Global knapsack data
- * @retur Best individual in from of a sting
+/**
+ * Print best individual as a string.
  */
-string TGPU_Statistics::GetBestIndividualStr(KnapsackData * GlobalKnapsackData){
+std::string Statistics::getBestIndividualStr(KnapsackData* globalKnapsackData) const
+{
+  /// Lambda function to convert 1 int into a bit string
+  auto convertIntToBitString= [] (TGene value, int nValidDigits) -> std::string
+  {
+    std::string str = "";
 
-    stringstream  S;
-
-    const Parameters& Params = Parameters::getInstance();
-
-
-    int  BlockCount    = GlobalKnapsackData->originalNumberOfItems / Params.getIntBlockSize();
-    bool IsNotFullBlock = (GlobalKnapsackData->originalNumberOfItems % Params.getIntBlockSize()) != 0;
-
-        // Convert by eight bits
-    for (int BlockID=0; BlockID < BlockCount; BlockID++){
-
-     for (int BitID = 0; BitID < Params.getIntBlockSize() -1; BitID++ ) {
-         char c = ((LocalBestIndividual[BlockID] & (1 << BitID)) == 0) ? '0' : '1';
-         S << c;
-         if (BitID % 8 ==7) S << " ";
-     }
-
-     S << "\n";
-
-   }
-
-    // Convert the remainder
-    if (IsNotFullBlock) {
-        int NumOfRestItems = GlobalKnapsackData->originalNumberOfItems  - (BlockCount * Params.getIntBlockSize());
-        for (int BitID = 0; BitID < NumOfRestItems; BitID++) {
-             char c =  ((LocalBestIndividual[BlockCount] & (1 << BitID)) == 0) ? '0' : '1';
-             S << c;
-             if (BitID % 8 ==7) S << " ";
-        }
+    for (int bit = 0; bit < nValidDigits; bit++)
+    {
+      str += ((value & (1 << bit)) == 0) ? "0" : "1";
+      str += (bit % 8 == 7) ? " " : "";
     }
 
+    for (int bit = nValidDigits; bit < 32; bit++)
+    {
+      str += 'x';
+      str += (bit % 8 == 7) ? " " : "";
+    }
 
- return S.str();
-}// end of GetBestIndividualStr
-//------------------------------------------------------------------------------
+    return str;
+  };// end of convertIntToBitString
 
+  std::string bestChromozome = "";
 
+  const int nBlocks = globalKnapsackData->originalNumberOfItems / 32;
 
-/*
- * Calculate global statistics
- *
- * @param Population - calculate over this population
- * @param PrintBest  - print best solution
+  for (int blockId = 0; blockId < nBlocks; blockId++)
+  {
+    bestChromozome += convertIntToBitString(mLocalBestIndividual[blockId], 32) + "\n";
+  }
+
+  // Reminder
+  if (globalKnapsackData->originalNumberOfItems % 32 > 0 )
+  {
+    bestChromozome += convertIntToBitString(mLocalBestIndividual[nBlocks],
+                                            globalKnapsackData->originalNumberOfItems % 32);
+  }
+
+ return bestChromozome;
+}// end of getBestIndividualStr
+//----------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Calculate global statistics.
  */
-void TGPU_Statistics::Calculate(TGPU_Population * Population, bool PrintBest){
+void Statistics::calculate(TGPU_Population* population,
+                           bool             printBest)
+{
+  const Parameters& params = Parameters::getInstance();
 
-    const Parameters& Params = Parameters::getInstance();
+  // Calculate local statistics
+  calculateLocalStats(population,  printBest);
 
-    // Calculate local statistics
-    CalculateLocalStats(Population,  PrintBest);
-
-
-
-    //-- collect statistics data --//
-    MPI_Gather(HostStatData         ,sizeof(TStatDataToExchange),MPI_BYTE,
-               ReceiveStatDataBuffer,sizeof(TStatDataToExchange),MPI_BYTE, 0, MPI_COMM_WORLD);
-
-
-    if (PrintBest) {
-
-        //-- Collect Individuals --//
-        MPI_Gather(LocalBestIndividual     ,Params.getChromosomeSize(), MPI_UNSIGNED,
-                   ReceiveIndividualBuffer ,Params.getChromosomeSize(), MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    }
-
-    // only master calculates the global statistics
-    if (Params.getIslandIdx() == 0) CalculateGlobalStatistics(PrintBest);
-
-}// end of Calculate
-//------------------------------------------------------------------------------
+  // Collect statistics data
+  MPI_Gather(mHostStatData         , sizeof(StatisticsData), MPI_BYTE,
+             mReceiveStatDataBuffer, sizeof(StatisticsData), MPI_BYTE, 0, MPI_COMM_WORLD);
 
 
-//----------------------------------------------------------------------------//
-//                       TGPU_Statistics Implementation                       //
-//                              protected methods                             //
-//----------------------------------------------------------------------------//
+  if (printBest)
+  {
+    // Collect individuals
+    MPI_Gather(mLocalBestIndividual    , params.getChromosomeSize(), MPI_UNSIGNED,
+               mReceiveIndividualBuffer, params.getChromosomeSize(), MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+  }
 
-/*
+  // only master calculates the global statistics
+  if (params.getIslandIdx() == 0)
+  {
+    calculateGlobalStatistics(printBest);
+  }
+}// end of calculate
+//----------------------------------------------------------------------------------------------------------------------
+
+
+//--------------------------------------------------------------------------------------------------------------------//
+//----------------------------------------------- Protected methods --------------------------------------------------//
+//--------------------------------------------------------------------------------------------------------------------//
+
+/**
  * Allocate GPU memory
  */
-void TGPU_Statistics::AllocateCudaMemory(){
+void Statistics::allocateCudaMemory()
+{
+  // Host data
 
-    //------------ Host data ---------------//
+  // Allocate Host basic structure
+  checkCudaErrors(cudaHostAlloc<StatisticsData>(&mHostStatData,  sizeof(StatisticsData),cudaHostAllocDefault));
 
-    // Allocate Host basic structure
-    cudaHostAlloc((void**)&HostStatData,  sizeof(TStatDataToExchange),cudaHostAllocDefault);
+  // Allocate Host basic structure
+  checkCudaErrors(cudaHostAlloc<TGene>(&mLocalBestIndividual,
+                                       sizeof(TGene) * Parameters::getInstance().getChromosomeSize(),
+                                       cudaHostAllocDefault));
 
+  // Device data
+  checkCudaErrors(cudaMalloc<StatisticsData>(&mLocalDeviceStatData,  sizeof(StatisticsData)));
 
+}// end of allocateCudaMemory
+//----------------------------------------------------------------------------------------------------------------------
 
-    // Allocate Host basic structure
-   cudaHostAlloc((void**)&LocalBestIndividual, sizeof(TGene) * Parameters::getInstance().getChromosomeSize()
-                           ,cudaHostAllocDefault);
-
-
-    //------------ Device data ---------------//
-
-    // Allocate data structure
-
-    cudaMalloc((void**)&LocalDeviceStatData,  sizeof(TStatDataToExchange));
-
-
-
-}// end of AllocateMemory
-//------------------------------------------------------------------------------
-
-/*
+/**
  * Free GPU memory
  */
-void TGPU_Statistics::FreeCudaMemory(){
+void Statistics::freeCudaMemory()
+{
+  // Free CPU Best individual
+  checkCudaErrors(cudaFreeHost(mLocalBestIndividual));
 
+  //  Free structure
+  checkCudaErrors(cudaFreeHost(mHostStatData));
 
-    //-- Free CPU Best individual --//
-   cudaFreeHost(LocalBestIndividual);
+  // Free whole structure
+  checkCudaErrors(cudaFree(mLocalDeviceStatData));
 
+}// end of freeCudaMemory
+//----------------------------------------------------------------------------------------------------------------------
 
-    //-- Free structure --//
-   cudaFreeHost(HostStatData);
-
-
-    //-- free whole structure --//
-   cudaFree(LocalDeviceStatData);
-
-}// end of FreeMemory
-//------------------------------------------------------------------------------
-
-
-
-
-
-/*
- * Initialize statistics before computation
- *
+/**
+ * Initialize statistics before computation.
  */
-void TGPU_Statistics::InitStatistics(){
+void Statistics::initStatistics()
+{
+  mHostStatData->maxFitness  = TFitness(0);
+  mHostStatData->minFitness  = TFitness(UINT_MAX);
+  mHostStatData->sumFitness  = 0.0f;
+  mHostStatData->sum2Fitness = 0.0f;
+  mHostStatData->indexBest   = 0;
 
+  //  Copy 4 statistics values
+  checkCudaErrors(cudaMemcpy(mLocalDeviceStatData, mHostStatData, sizeof(StatisticsData), cudaMemcpyHostToDevice));
+}// end of initStatistics
+//----------------------------------------------------------------------------------------------------------------------
 
-    HostStatData->MaxFitness  = TFitness(0);
-    HostStatData->MinFitness  = TFitness(UINT_MAX);
-    HostStatData->SumFitness  = 0.0f;
-    HostStatData->Sum2Fitness = 0.0f;
-    HostStatData->IndexBest   = 0;
-
-    //-- Copy 4 statistics values --//
-    cudaMemcpy(LocalDeviceStatData, HostStatData, sizeof(TStatDataToExchange), cudaMemcpyHostToDevice);
-
-
-
-}// end of InitStatistics
-//------------------------------------------------------------------------------
-
-
-/*
- * Calculate local statistics and download them to the host
- *
- * @param Population - calculate over this population
- * @param PrintBest  - print best solution
+/**
+ * Calculate local statistics and download them to the host.
  */
-void TGPU_Statistics::CalculateLocalStats(TGPU_Population * Population, bool PrintBest){
+void Statistics::calculateLocalStats(TGPU_Population* population,
+                                     bool             printBest)
+{
+  // Initialize statistics
+  initStatistics();
 
-    // Initialize statistics
-    InitStatistics();
-
-    // Run the CUDA kernel to calculate statistics
-    CalculateStatistics
-            <<<Parameters::getInstance().getNumberOfDeviceSMs() * 2, BLOCK_SIZE >>>
-            (LocalDeviceStatData, Population->DeviceData);
-
-
-    // Copy data down to host
-    CopyOut(Population, PrintBest);
-
-}// end of Calculate
-//------------------------------------------------------------------------------
+  // Run the CUDA kernel to calculate statistics
+  CalculateStatistics<<<Parameters::getInstance().getNumberOfDeviceSMs() * 2, BLOCK_SIZE >>>
+                     (mLocalDeviceStatData, population->DeviceData);
 
 
-/*
- * Copy data from GPU Statistics structure to CPU
- *
- * @param Population - calculate over this population
- * @param PrintBest  - print best solution
- *
+  // Copy data down to host
+  copyFromDevice(population, printBest);
+}// end of calculateLocalStats
+//----------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Copy data from GPU Statistics structure to CPU.
  */
-void TGPU_Statistics::CopyOut(TGPU_Population * Population, bool PrintBest){
+void Statistics::copyFromDevice(TGPU_Population* population,
+                                bool             printBest)
+{
+  // Copy 4 statistics values
+  checkCudaErrors(cudaMemcpy(mHostStatData, mLocalDeviceStatData, sizeof(StatisticsData), cudaMemcpyDeviceToHost));
 
+  //  Copy of chromosome
+  if (printBest)
+  {
+    population->CopyOutIndividual(mLocalBestIndividual, mHostStatData->indexBest);
+  }
+}// end of copyFromDevice
+//----------------------------------------------------------------------------------------------------------------------
 
-
-    //-- Copy 4 statistics values --//
-    cudaMemcpy(HostStatData, LocalDeviceStatData, sizeof(TStatDataToExchange), cudaMemcpyDeviceToHost);
-
-    //-- Copy of chromosome --//
-    if (PrintBest){
-
-        Population->CopyOutIndividual(LocalBestIndividual, HostStatData->IndexBest);
-    }
-
-
-}// end of CopyOut
-//------------------------------------------------------------------------------
-
-
-
-/*
+/**
  * Summarize statistics Local statistics to global
- *
- * @param PrintBest  - print best solution
  */
-void TGPU_Statistics::CalculateGlobalStatistics(bool PrintBest){
+void Statistics::calculateGlobalStatistics(bool printBest)
+{
 
- GlobalDerivedStat->IslandBestIdx = 0;
+  mGlobalDerivedStat->bestIslandIdx = 0;
 
- HostStatData->MaxFitness  = ReceiveStatDataBuffer[0].MaxFitness;
- HostStatData->MinFitness  = ReceiveStatDataBuffer[0].MinFitness;
- HostStatData->SumFitness  = ReceiveStatDataBuffer[0].SumFitness;
- HostStatData->Sum2Fitness = ReceiveStatDataBuffer[0].Sum2Fitness;
+  mHostStatData->maxFitness  = mReceiveStatDataBuffer[0].maxFitness;
+  mHostStatData->minFitness  = mReceiveStatDataBuffer[0].minFitness;
+  mHostStatData->sumFitness  = mReceiveStatDataBuffer[0].sumFitness;
+  mHostStatData->sum2Fitness = mReceiveStatDataBuffer[0].sum2Fitness;
 
- const Parameters& Params = Parameters::getInstance();
+  const Parameters& params = Parameters::getInstance();
 
   // Numeric statistics
-  for (int i = 1 ;  i < Params.getIslandCount(); i++){
+  for (int i = 1; i < params.getIslandCount(); i++)
+  {
+    if (mHostStatData->maxFitness < mReceiveStatDataBuffer[i].maxFitness)
+    {
+      mHostStatData->maxFitness = mReceiveStatDataBuffer[i].maxFitness;
+      mGlobalDerivedStat->bestIslandIdx = i;
+    }
 
+    if (mHostStatData->minFitness > mReceiveStatDataBuffer[i].minFitness)
+    {
+      mHostStatData->minFitness = mReceiveStatDataBuffer[i].minFitness;
+    }
 
-      if (HostStatData->MaxFitness < ReceiveStatDataBuffer[i].MaxFitness) {
-          HostStatData->MaxFitness = ReceiveStatDataBuffer[i].MaxFitness;
-          GlobalDerivedStat->IslandBestIdx = i;
-      }
-
-      if (HostStatData->MinFitness > ReceiveStatDataBuffer[i].MinFitness) {
-          HostStatData->MinFitness = ReceiveStatDataBuffer[i].MinFitness;
-      }
-
-      HostStatData->SumFitness  +=  ReceiveStatDataBuffer[i].SumFitness;
-      HostStatData->Sum2Fitness +=  ReceiveStatDataBuffer[i].Sum2Fitness;
-
-
+    mHostStatData->sumFitness  += mReceiveStatDataBuffer[i].sumFitness;
+    mHostStatData->sum2Fitness += mReceiveStatDataBuffer[i].sum2Fitness;
   }
 
 
- GlobalDerivedStat->AvgFitness = HostStatData->SumFitness / (Params.getPopulationSize() * Params.getIslandCount());
- GlobalDerivedStat->Divergence = sqrtf(fabsf( (HostStatData->Sum2Fitness / (Params.getPopulationSize() * Params.getIslandCount()) -
-                                         GlobalDerivedStat->AvgFitness * GlobalDerivedStat->AvgFitness))
-         );
-
-
-}// end of CalculateGlobalStatistics
-//------------------------------------------------------------------------------
+ mGlobalDerivedStat->avgFitness = mHostStatData->sumFitness / (params.getPopulationSize() * params.getIslandCount());
+ mGlobalDerivedStat->divergence = sqrt(fabs((mHostStatData->sum2Fitness /
+                                              (params.getPopulationSize() * params.getIslandCount()) -
+                                             mGlobalDerivedStat->avgFitness * mGlobalDerivedStat->avgFitness))
+                                  );
+}// end of calculateGlobalStatistics
+//----------------------------------------------------------------------------------------------------------------------

@@ -1,29 +1,29 @@
-/* 
- * File:        Statistics.h
- * Author:      Jiri Jaros
- * Affiliation: Brno University of Technology
+/**
+ * @file        Statistics.h
+ * @author      Jiri Jaros
+ *              Brno University of Technology
  *              Faculty of Information Technology
- *              
+ *
  *              and
- * 
+ *
  *              The Australian National University
  *              ANU College of Engineering & Computer Science
  *
- * Email:       jarosjir@fit.vutbr.cz
- * Web:         www.fit.vutbr.cz/~jarosjir
- * 
- * Comments:    Header file of the GA statistics
+ *              jarosjir@fit.vutbr.cz
+ *              www.fit.vutbr.cz/~jarosjir
+ *
+ * @brief       Header file of the GA statistics
  *              This class maintains and collects GA statistics
  *
- * 
- * License:     This source code is distribute under OpenSource GNU GPL license
- *                
- *              If using this code, please consider citation of related papers
- *              at http://www.fit.vutbr.cz/~jarosjir/pubs.php        
- *      
+ * @date        08 June 2012 2012, 00:00 (created)
+ *              28 February  2022, 16:23 (revised)
  *
- * 
- * Created on 08 June 2012, 00:00 PM
+ * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
+ *
+ * This source code is distribute under OpenSouce GNU GPL license.
+ * If using this code, please consider citation of related papers
+ * at http://www.fit.vutbr.cz/~jarosjir/pubs.php
+ *
  */
 
 #ifndef STATISTICS_H
@@ -35,93 +35,136 @@
 #include "GlobalKnapsackData.h"
 
 
-
-
-/*
- * Statistics Structure
+/**
+ * @struct StatisticsData
+ * @brief  Statistics Structure
  */
-struct TStatDataToExchange{
-  TFitness MinFitness;  // Minimum fitness value in population
-  TFitness MaxFitness;  // Maximum fitness value in population      
-  
-  float    SumFitness;  // Sum of fitness values over an island
-  float    Sum2Fitness; // Sum of fitness squares over an island                
-  
-  int      IndexBest;  // Index of the best solution
-  
-};//  TStatDataToExchange
-//----------------------------------------------------------------------------
+struct StatisticsData
+{
+  /// Minimum fitness value in population.
+  TFitness minFitness  = TFitness(0);
+  /// Maximum fitness value in population.
+  TFitness maxFitness  = TFitness(0);
 
-/*
- * Derived Statistics
+  /// Sum of fitness to calculate average.
+  float    sumFitness  = 0.f;
+  /// Sum of fitness squared to calculate divergence.
+  float    sum2Fitness = 0.f;
+  /// Which individual is the best.
+  int      indexBest   = 0;
+};//  StatisticsData
+//----------------------------------------------------------------------------------------------------------------------
+
+/**
+ * @struct DerivedStats
+ * @brief  Derived statistics.
  */
-struct TDerivedStats{
-    float   AvgFitness;     // Average individual
-    float   Divergence;     // Divergence  
-    int     IslandBestIdx;  // Index of the best island
-};//TDerivedStats
-//------------------------------------------------------------------------------
+struct DerivedStats
+{
+  /// Average fitness value.
+  float avgFitness    = 0.f;
+  /// Divergence
+  float divergence    = 0.f;
+  // Index of the best island.
+  int   bestIslandIdx = 0.f;
+};// DerivedStats
+//----------------------------------------------------------------------------------------------------------------------
 
-
-
-/*
- * GPU statistics class
- * 
+/**
+ * @class Statistics
+ * @brief statistics class.
  */
-class TGPU_Statistics {
-public:
-    
-    //-- Only master can read these values --//
-    TFitness GetMaxFitness()           const {return HostStatData->MaxFitness;};
-    TFitness GetMinFitness()           const {return HostStatData->MinFitness;};
-    float    GetAvgFitness()           const {return GlobalDerivedStat->AvgFitness;};    
-    float    GetDivergence()           const {return GlobalDerivedStat->Divergence;};
-    int      GetBestIslandIdx()        const {return GlobalDerivedStat->IslandBestIdx;};
-        
-            
-    // calculate global statistics
-    void   Calculate              (TGPU_Population * Population, bool PrintBest);    
-    // print best individual -- only on MASTER node --//
-    string GetBestIndividualStr   (KnapsackData * GlobalKnapsackData);
-    
-    TGPU_Statistics();
-    virtual ~TGPU_Statistics();
-
-protected:
-    
-    TStatDataToExchange * LocalDeviceStatData;          // stat data on device
-    TStatDataToExchange * HostStatData;                 // copy of stat data on host
-    
-    TStatDataToExchange * ReceiveStatDataBuffer;        // stat data from all nodex
-    
-    TDerivedStats       * GlobalDerivedStat;            // derived data from all nodes
-        
-    TGene               * LocalBestIndividual;          // host copy of the best solution / Global best
-    TGene               * ReceiveIndividualBuffer;       // all the best solutions from all nodes
-    
-    // Memory Allocation
-    void AllocateCudaMemory();
-    void FreeCudaMemory();
-    
-    // Initialize statistics structure    
-    void InitStatistics();
-    // Calculate local statistics
-    void CalculateLocalStats (TGPU_Population * Population, bool PrintBest);    
-    
-    // Calculate Global statistics
-    void CalculateGlobalStatistics(bool PrintBest);
-    
-    // Copy statistics data from GPU memory down to host
-    void CopyOut(TGPU_Population * Population, bool PrintBest); 
-        
-private:
-         
-   
-    TGPU_Statistics(const TGPU_Population& orig);
-
-};// end of TGPU_Statistics
-//------------------------------------------------------------------------------
+class Statistics
+{
+  public:
+    /// Constructor.
+    Statistics();
+    /// Copy constructor not allowed.
+    Statistics(const Statistics&) = delete;
+    /// Destructor.
+    virtual ~Statistics();
+    /// Assignment operator not allowed.
+    Statistics& operator=(const Statistics&) = delete;
 
 
-#endif	/* GPU_STATISTICS_H */
+    /**
+     * Calculate statistics
+     * @param [in] population - Population to calculate statistics of.
+     * @param [in] printBest  - do we need to download the best individual to print.
+     */
+    void   calculate(TGPU_Population* population,
+                     bool             printBest);
+
+    /**
+     * Get best individual in text form.
+     * @param  [in] globalKnapsackData  - Global knapsack data
+     * @return String representation of the best individual.
+     * @note only on root rank can call this routine.
+     */
+    std::string getBestIndividualStr(KnapsackData* globalKnapsackData) const;
+
+    //-------------------------------------------- Getters for root rank ---------------------------------------------//
+    /// Get minimum fitness.
+    TFitness getMinFitness()           const {return mHostStatData->minFitness;};
+    /// Get maximum fitness.
+    TFitness getMaxFitness()           const {return mHostStatData->maxFitness;};
+    /// Get average fitness.
+    float    getAvgFitness()           const {return mGlobalDerivedStat->avgFitness;};
+    /// Get divergence.
+    float    getDivergence()           const {return mGlobalDerivedStat->divergence;};
+    /// Get best Island id.
+    int      getBestIslandIdx()        const {return mGlobalDerivedStat->bestIslandIdx;};
+
+  protected:
+    /// Allocate memory on device side.
+    void allocateCudaMemory();
+    /// Free memory on device side.
+    void freeCudaMemory();
+
+    /// Initialize statistics structure.
+    void initStatistics();
+
+    /**
+     * Calculate local statistics.
+     * @param [in,out] population - Population to calculate the statistics on.
+     * @param [in]     printBest  - Shall I print best solution?
+     */
+    void calculateLocalStats(TGPU_Population* population,
+                             bool             printBest);
+
+    /**
+     * Calculate Global statistics.
+     * @param [in] printBest - Shall I print best solution?
+     */
+    void calculateGlobalStatistics(bool printBest);
+
+    /**
+     * Copy statistics data from GPU memory down to host
+     * @param [in] population - Population to take the best solution from.
+     * @param [in] printBest  - Shall I print best solution?
+     */
+    void copyFromDevice(TGPU_Population* population,
+                        bool             printBest);
+
+    /// Statistics on the local device.
+    StatisticsData* mLocalDeviceStatData;
+    /// Copy of local statistics on the host side.
+    StatisticsData* mHostStatData;
+
+    /// Received statistics from all nodes, root rank only.
+    StatisticsData* mReceiveStatDataBuffer;
+    /// Global derived statistics, root rank only.
+    DerivedStats*   mGlobalDerivedStat;
+
+    // Host copy of the best solution / global best.
+    TGene*          mLocalBestIndividual;
+    // All the best solutions from all nodes, root rank only.
+    TGene*          mReceiveIndividualBuffer;
+
+  private:
+};// end of Statistics
+//----------------------------------------------------------------------------------------------------------------------
+
+
+#endif	/* STATISTICS_H */
 
