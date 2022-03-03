@@ -1,68 +1,67 @@
-/* 
- * File:        main.cpp 
- * Author:      Jiri Jaros
- * Affiliation: Brno University of Technology
+/**
+ * @file        main.cpp
+ * @author      Jiri Jaros
+ *              Brno University of Technology
  *              Faculty of Information Technology
- *              
+ *
  *              and
- * 
+ *
  *              The Australian National University
  *              ANU College of Engineering & Computer Science
  *
- * Email:       jarosjir@fit.vutbr.cz
- * Web:         www.fit.vutbr.cz/~jarosjir
- * 
- * Comments:    Efficient MPI island-based Multi-GPU implementation of the 
+ *              jarosjir@fit.vutbr.cz
+ *              www.fit.vutbr.cz/~jarosjir
+ *
+ * @brief       Efficient MPI island-based Multi-GPU implementation of the
  *              Genetic Algorithm, solving the Knapsack problem.
  *
- * 
- * License:     This source code is distribute under OpenSource GNU GPL license
- *                
- *              If using this code, please consider citation of related papers
- *              at http://www.fit.vutbr.cz/~jarosjir/pubs.php       
- *      
+ * @date        08 June      2012, 00:00 (created)
+ *              03 March     2022, 11:09 (revised)
  *
- * 
- * Created on 08 June 2012, 00:00 PM
+ * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
+ *
+ * This source code is distribute under OpenSouce GNU GPL license.
+ * If using this code, please consider citation of related papers
+ * at http://www.fit.vutbr.cz/~jarosjir/pubs.php
+ *
  */
 
 
-#include <iostream>
-#include <stdio.h>
 #include <mpi.h>
+#include <cstdio>
 
 #include "Evolution.h"
 #include "Parameters.h"
-
-
-
-using namespace std;
 
 /*
  * The main function
  */
 int main(int argc, char **argv)
 {
+  // Initialize MPI
+  MPI_Init(&argc, &argv);
 
-    // Initialize MPI
-    MPI_Init(&argc, &argv);    
-    
-    //Initialize Evolution
-    TGPU_Evolution GPU_Evolution(argc,argv);
+  //Initialize Evolution
+  Evolution evolution(argc,argv);
 
-    // Start time
-    double AlgorithmStartTime;
-    MPI_Barrier(MPI_COMM_WORLD);
-    AlgorithmStartTime = MPI_Wtime();
-        
-    //
-    GPU_Evolution.Run();
-        
-    // Run evolution
-    MPI_Barrier(MPI_COMM_WORLD);
-    double AlgorithmStopTime = MPI_Wtime();    
-    if (GPU_Evolution.IsMaster()) printf("Execution time: %0.3f s.\n",  AlgorithmStopTime - AlgorithmStartTime);        
-        
-    MPI_Finalize();
-    return 0;
-}
+  // Start time
+  double AlgorithmStartTime;
+  MPI_Barrier(MPI_COMM_WORLD);
+  AlgorithmStartTime = MPI_Wtime();
+
+  // Run evolutin process.
+  evolution.run();
+
+  // Run evolution
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  double AlgorithmStopTime = MPI_Wtime();
+  if (evolution.isMaster())
+  {
+    printf("Execution time: %0.3f s.\n",  AlgorithmStopTime - AlgorithmStartTime);
+  }
+
+  MPI_Finalize();
+  return EXIT_SUCCESS;
+}// end of main
+//----------------------------------------------------------------------------------------------------------------------

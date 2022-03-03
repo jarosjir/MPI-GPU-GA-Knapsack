@@ -1,7 +1,7 @@
-/*
- * File:        Evolution.h
- * Author:      Jiri Jaros
- * Affiliation: Brno University of Technology
+/**
+ * @file        Evolution.h
+ * @author      Jiri Jaros
+ *              Brno University of Technology
  *              Faculty of Information Technology
  *
  *              and
@@ -9,23 +9,23 @@
  *              The Australian National University
  *              ANU College of Engineering & Computer Science
  *
- * Email:       jarosjir@fit.vutbr.cz
- * Web:         www.fit.vutbr.cz/~jarosjir
+ *              jarosjir@fit.vutbr.cz
+ *              www.fit.vutbr.cz/~jarosjir
  *
- * Comments:    Header file of the GA evolution
- *              This class controls the evolution process on multicore CPU
+ * @brief       Header file of the GA evolution
+ *              This class controls the evolution process on multiple GPUs across many nodes.
  *
+ * @date        08 June      2012, 00:00 (created)
+ *              03 March     2022, 11:09 (revised)
  *
- * License:     This source code is distribute under OpenSource GNU GPL license
+ * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
- *              If using this code, please consider citation of related papers
- *              at http://www.fit.vutbr.cz/~jarosjir/pubs.php
+ * This source code is distribute under OpenSouce GNU GPL license.
+ * If using this code, please consider citation of related papers
+ * at http://www.fit.vutbr.cz/~jarosjir/pubs.php
  *
- *
- *
- * Created on 08 June     2012, 00:00 PM
- * Revised on 24 February 2022, 16:27 PM
  */
+
 #ifndef EVOLUTION_H
 #define EVOLUTION_H
 
@@ -36,58 +36,79 @@
 #include "GlobalKnapsackData.h"
 
 
-/*
- * GPU evolution process
- *
+/**
+ * @class Evolution
+ * @brief Class controlling the evolutionary process.
  */
-class TGPU_Evolution{
-public:
-             // Class constructors
-             TGPU_Evolution(int argc, char **argv);
-             TGPU_Evolution() : Params(Parameters::getInstance()) {};
-    virtual ~TGPU_Evolution();
+class Evolution
+{
+  public:
+    /// Class constructors
+    Evolution() = delete;
+    /**
+     * Constructor commandline parameters.
+     * @param [] argc - Argument counts
+     * @param [] argv - Commandline argiments.
+     */
+    Evolution(int argc, char **argv);
 
-    // Run evolution
-    void     Run();
+    /// Copy constructor not allowed.
+    Evolution(const Evolution&) = delete;
+    /// Destructor.
+    virtual ~Evolution();
+    /// Assignment operator not allowed.
+    Evolution& operator =(const Evolution&) = delete;
+
+    /// Run evolution.
+    void run();
 
     // Is this the master node?
-    bool     IsMaster() {return Params.getIslandIdx() == 0;};
+    bool isMaster() const { return mParams.getIslandIdx() == 0; };
 
 
-protected:
-    Parameters&   Params;               // Parameters of evolution
-    int           FActGeneration;       // Actual generation
-    unsigned int  FRandomSeed;          // Random Seed
+  protected:
+    /// Initialize random seed.
+    void         initRandomSeed();
+    /// Get next random seed.
+    unsigned int getRandomSeed()  { return mRandomSeed++; };
 
+    /// Initialize evolution.
+    void         initialize();
+    /// Run evolution.
+    void         runEvolutionCycle();
+    /// Migrate.
+    void         migrate();
 
+    /// Parameters of evolution.
+    Parameters&   mParams;
+    /// Actual generation.
+    int           mActGeneration;
+    /// Random Seed.
+    unsigned int  mRandomSeed;
 
-    GPUPopulation*  MasterPopulation;        // Master GA population
-    GPUPopulation*  OffspringPopulation;     // Population of offsprings
+    /// Master GA population.
+    GPUPopulation*     mMasterPopulation;
+    /// Population of offsprings.
+    GPUPopulation*     mOffspringPopulation;
 
-    GPUPopulation*  GPU_EmigrantsToSend;     // Emigrants to send
-    GPUPopulation*  GPU_EmigrantsToReceive;  // Emigrants to receive
+    /// Emigrants to send.
+    GPUPopulation*     mDeviceEmigrantsToSend;
+    /// Emigrants to receive.
+    GPUPopulation*     mDeviceEmigrantsToReceive;
 
-    CPUPopulation*  CPU_EmigrantsToSend;     // Buffer for individuals to send
-    CPUPopulation*  CPU_EmigrantsToReceive;  // Buffer for individuals to receive
+    /// Buffer for individuals to send.
+    CPUPopulation*     mHostEmigrantsToSend;
+    /// Buffer for individuals to receive.
+    CPUPopulation*     mHostEmigrantsToReceive;
 
-    Statistics*  GPUStatistics;           // Statistics over GA process
+    /// Statistics over GA process.
+    Statistics*        mStatistics;
 
-    GlobalKnapsackData GlobalData;            // Global data of knapsack
+    /// Global data of knapsack.
+    GlobalKnapsackData mGlobalData;
 
+    static constexpr int kMpiDataTag = 100;
+};// end of Evolution
+//----------------------------------------------------------------------------------------------------------------------
 
-    void         InitSeed();
-    unsigned int GetSeed()  {return FRandomSeed++;};
-
-    // Initialize evolution
-    void         Initialize();
-    // Run evolution
-    void         RunEvolutionCycle();
-
-    // Migrate
-    void         Migrate();
-
-    TGPU_Evolution(const TGPU_Evolution& orig);
-};
-
-#endif	/* TGPU_EVOLUTION_H */
-
+#endif	/* Evolution */
