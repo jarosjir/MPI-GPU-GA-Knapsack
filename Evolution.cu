@@ -80,16 +80,16 @@ TGPU_Evolution::TGPU_Evolution(int argc, char **argv)
     GlobalData.loadFromFile();
 
     // Create populations on GPU
-    MasterPopulation       = new TGPU_Population(Params.getPopulationSize(), Params.getChromosomeSize());
-    OffspringPopulation    = new TGPU_Population(Params.getOffspringPopulationSize(), Params.getChromosomeSize());
+    MasterPopulation       = new GPUPopulation(Params.getPopulationSize(), Params.getChromosomeSize());
+    OffspringPopulation    = new GPUPopulation(Params.getOffspringPopulationSize(), Params.getChromosomeSize());
 
 
     // Create buffers on GPU
-    GPU_EmigrantsToSend     = new TGPU_Population(Params.getEmigrantCount(), Params.getChromosomeSize());
-    GPU_EmigrantsToReceive  = new TGPU_Population(Params.getEmigrantCount(), Params.getChromosomeSize());
+    GPU_EmigrantsToSend     = new GPUPopulation(Params.getEmigrantCount(), Params.getChromosomeSize());
+    GPU_EmigrantsToReceive  = new GPUPopulation(Params.getEmigrantCount(), Params.getChromosomeSize());
     // Create buffers on CPU
-    CPU_EmigrantsToSend     = new TCPU_Population(Params.getEmigrantCount(), Params.getChromosomeSize());
-    CPU_EmigrantsToReceive  = new TCPU_Population(Params.getEmigrantCount(), Params.getChromosomeSize());
+    CPU_EmigrantsToSend     = new CPUPopulation(Params.getEmigrantCount(), Params.getChromosomeSize());
+    CPU_EmigrantsToReceive  = new CPUPopulation(Params.getEmigrantCount(), Params.getChromosomeSize());
 
     // Create Vector lock
     //MigrationVectorLock    = new TGPU_Vector_Lock(Params.PopulationSize());
@@ -182,7 +182,7 @@ void TGPU_Evolution::Initialize(){
     //-- Initialize population --//
     FirstPopulationGenerationKernel
             <<<Params.getNumberOfDeviceSMs() * 2, BLOCK_SIZE>>>
-            (MasterPopulation->DeviceData, GetSeed());
+            (MasterPopulation->getDeviceData(), GetSeed());
 
     dim3 Blocks;
     dim3 Threads;
@@ -199,7 +199,7 @@ void TGPU_Evolution::Initialize(){
 
     CalculateKnapsackFintess
             <<<Blocks, Threads>>>
-                (MasterPopulation->DeviceData, GlobalData.getDeviceData());
+                (MasterPopulation->getDeviceData(), GlobalData.getDeviceData());
 
 
 }// end of TGPU_Evolution
@@ -243,7 +243,7 @@ void TGPU_Evolution::RunEvolutionCycle(){
 
           GeneticManipulationKernel
                   <<<Blocks, Threads>>>
-                  (MasterPopulation->DeviceData, OffspringPopulation->DeviceData, GetSeed());
+                  (MasterPopulation->getDeviceData(), OffspringPopulation->getDeviceData(), GetSeed());
 
 
 
@@ -258,7 +258,7 @@ void TGPU_Evolution::RunEvolutionCycle(){
 
           CalculateKnapsackFintess
                 <<<Blocks, Threads>>>
-                    (OffspringPopulation->DeviceData, GlobalData.getDeviceData());
+                    (OffspringPopulation->getDeviceData(), GlobalData.getDeviceData());
 
 
           //----------- Replacement ---------//
@@ -274,14 +274,14 @@ void TGPU_Evolution::RunEvolutionCycle(){
 
           ReplacementKernel
                   <<<Blocks, Threads>>>
-                  (MasterPopulation->DeviceData, OffspringPopulation->DeviceData, GetSeed());
+                  (MasterPopulation->getDeviceData(), OffspringPopulation->getDeviceData(), GetSeed());
 
 
 
-          TCPU_Population pop(Params.getPopulationSize(), Params.getChromosomeSize());
+          CPUPopulation pop(Params.getPopulationSize(), Params.getChromosomeSize());
 
 
-          MasterPopulation->CopyOut(pop.HostData);
+          MasterPopulation->copyFromDevice(pop.getHostData());
           //printf("First idx %f\n", pop.HostData->Fitness[0]);
 
           /*GPUStatistics->Calculate(MasterPopulation, Params.GetPrintBest());
@@ -352,8 +352,8 @@ void TGPU_Evolution::Migrate(){
 
 
     // Receive immigrants
-    MPI_Irecv(CPU_EmigrantsToReceive->HostData->Fitness   ,Params.getEmigrantCount()                           , MPI_FLOAT   , Source, MPI_TAG_DATA, MPI_COMM_WORLD, &request[2]);
-    MPI_Irecv(CPU_EmigrantsToReceive->HostData->Population,Params.getEmigrantCount() * Params.getChromosomeSize(), MPI_UNSIGNED, Source, MPI_TAG_DATA, MPI_COMM_WORLD, &request[3]);
+    MPI_Irecv(CPU_EmigrantsToReceive->getHostData()->fitness   ,Params.getEmigrantCount()                           , MPI_FLOAT   , Source, MPI_TAG_DATA, MPI_COMM_WORLD, &request[2]);
+    MPI_Irecv(CPU_EmigrantsToReceive->getHostData()->population,Params.getEmigrantCount() * Params.getChromosomeSize(), MPI_UNSIGNED, Source, MPI_TAG_DATA, MPI_COMM_WORLD, &request[3]);
 
 
 
@@ -371,25 +371,25 @@ void TGPU_Evolution::Migrate(){
         // Fill emigrant population
       SelectEmigrantsKernel
                    <<<Blocks, Threads>>>
-                   (MasterPopulation->DeviceData, GPU_EmigrantsToSend->DeviceData, GetSeed());
+                   (MasterPopulation->getDeviceData(), GPU_EmigrantsToSend->getDeviceData(), GetSeed());
 
 
-      GPU_EmigrantsToSend->CopyOut(CPU_EmigrantsToSend->HostData);
+      GPU_EmigrantsToSend->copyFromDevice(CPU_EmigrantsToSend->getHostData());
 
 
   // Send emigrants
-  MPI_Isend(CPU_EmigrantsToSend->HostData->Fitness      ,Params.getEmigrantCount()                           , MPI_FLOAT   , Target, MPI_TAG_DATA, MPI_COMM_WORLD, &request[0]);
-  MPI_Isend(CPU_EmigrantsToSend->HostData->Population   ,Params.getEmigrantCount() * Params.getChromosomeSize(), MPI_UNSIGNED, Target, MPI_TAG_DATA, MPI_COMM_WORLD, &request[1]);
+  MPI_Isend(CPU_EmigrantsToSend->getHostData()->fitness      ,Params.getEmigrantCount()                           , MPI_FLOAT   , Target, MPI_TAG_DATA, MPI_COMM_WORLD, &request[0]);
+  MPI_Isend(CPU_EmigrantsToSend->getHostData()->population   ,Params.getEmigrantCount() * Params.getChromosomeSize(), MPI_UNSIGNED, Target, MPI_TAG_DATA, MPI_COMM_WORLD, &request[1]);
 
   MPI_Waitall(NumOfMessages, request, status);
 
-        GPU_EmigrantsToReceive->CopyIn(CPU_EmigrantsToReceive->HostData);
+        GPU_EmigrantsToReceive->copyToDevice(CPU_EmigrantsToReceive->getHostData());
 
      //-- Fill emigrant population --//
 
         AcceptEmigrantsKernel
                      <<<Blocks, Threads>>>
-                     (MasterPopulation->DeviceData, GPU_EmigrantsToReceive->DeviceData, GetSeed());
+                     (MasterPopulation->getDeviceData(), GPU_EmigrantsToReceive->getDeviceData(), GetSeed());
 
 
 }// End of Migrate

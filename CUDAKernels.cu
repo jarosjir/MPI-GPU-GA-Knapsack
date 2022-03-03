@@ -151,23 +151,23 @@ __device__ void TwoRandomINTs (RNG_2x32::ctr_type *RandomValues, unsigned int Ke
 inline __device__ int  GetIndex(unsigned int ChromosomeIdx, unsigned int GeneIdx);
 
 // Select an individual from a population
-inline __device__ int  Selection(TPopulationData * ParentsData, unsigned int Random1, unsigned int Random2);
+inline __device__ int  Selection(PopulationData * ParentsData, unsigned int Random1, unsigned int Random2);
 // Select an individual pick the worse (for replacement)
-inline __device__ int  Selection_Worse(TPopulationData * ParentsData, unsigned int Random1, unsigned int Random2);
+inline __device__ int  Selection_Worse(PopulationData * ParentsData, unsigned int Random1, unsigned int Random2);
 
 // Perform Uniform Crossover
-inline __device__ void CrossoverUniformFlip(TGene& GeneOffspring1, TGene& GeneOffspring2,
-                                            TGene GeneParent1    , TGene GeneParent2,
+inline __device__ void CrossoverUniformFlip(Gene& GeneOffspring1, Gene& GeneOffspring2,
+                                            Gene GeneParent1    , Gene GeneParent2,
                                             unsigned int RandomValue);
 
 // Perform BitFlip mutation
-inline __device__ void MutationBitFlip(TGene& GeneOffspring1, TGene& GeneOffspring2,
+inline __device__ void MutationBitFlip(Gene& GeneOffspring1, Gene& GeneOffspring2,
                                        unsigned int RandomValue1,unsigned int RandomValue2, int BitID);
 
 // Reduction kernels
 __device__ void HalfWarpReducePrice (volatile PriceType * sdata, int tid);
 __device__ void HalfWarpReduceWeight(volatile WeightType* sdata, int tid);
-__device__ void HalfWarpReduceGene(volatile TGene* sdata, int tid);
+__device__ void HalfWarpReduceGene(volatile Gene* sdata, int tid);
 
 
 //----------------------------------------------------------------------------//
@@ -266,7 +266,7 @@ __device__ void HalfWarpReduceWeight(volatile WeightType* sdata, int tid){
  * @param sdata  - data to reduce
  * @param tid    - idx of thread
  */
-__device__ void HalfWarpReduceGene(volatile TGene* sdata, int tid){
+__device__ void HalfWarpReduceGene(volatile Gene* sdata, int tid){
     if (tid < WARP_SIZE/2) {
         sdata[tid] += sdata[tid + 16];
         sdata[tid] += sdata[tid + 8];
@@ -291,13 +291,13 @@ __device__ void HalfWarpReduceGene(volatile TGene* sdata, int tid){
  * @param Random2    - Second random value
  * @return           - idx of the selected individual
  */
-inline __device__ int Selection(TPopulationData * ParentsData, unsigned int Random1, unsigned int Random2){
+inline __device__ int Selection(PopulationData * ParentsData, unsigned int Random1, unsigned int Random2){
 
 
-    unsigned int Idx1 = Random1 % (ParentsData->PopulationSize);
-    unsigned int Idx2 = Random2 % (ParentsData->PopulationSize);
+    unsigned int Idx1 = Random1 % (ParentsData->populationSize);
+    unsigned int Idx2 = Random2 % (ParentsData->populationSize);
 
-    return (ParentsData->Fitness[Idx1] > ParentsData->Fitness[Idx2]) ? Idx1 : Idx2;
+    return (ParentsData->fitness[Idx1] > ParentsData->fitness[Idx2]) ? Idx1 : Idx2;
 }// Selection
 //------------------------------------------------------------------------------
 
@@ -309,13 +309,13 @@ inline __device__ int Selection(TPopulationData * ParentsData, unsigned int Rand
  * @param Random2    - Second random value
  * @return           - idx of the selected individual
  */
-inline __device__ int Selection_Worse(TPopulationData * ParentsData, unsigned int Random1, unsigned int Random2){
+inline __device__ int Selection_Worse(PopulationData * ParentsData, unsigned int Random1, unsigned int Random2){
 
 
-    unsigned int Idx1 = Random1 % (ParentsData->PopulationSize);
-    unsigned int Idx2 = Random2 % (ParentsData->PopulationSize);
+    unsigned int Idx1 = Random1 % (ParentsData->populationSize);
+    unsigned int Idx2 = Random2 % (ParentsData->populationSize);
 
-    return (ParentsData->Fitness[Idx1] < ParentsData->Fitness[Idx2]) ? Idx1 : Idx2;
+    return (ParentsData->fitness[Idx1] < ParentsData->fitness[Idx2]) ? Idx1 : Idx2;
 }// Selection
 //------------------------------------------------------------------------------
 
@@ -331,8 +331,8 @@ inline __device__ int Selection_Worse(TPopulationData * ParentsData, unsigned in
  * @param       Mask           - Random value for mask
  *
  */
-inline __device__ void CrossoverUniformFlip(TGene& GeneOffspring1, TGene& GeneOffspring2,
-                                            TGene GeneParent1    , TGene GeneParent2,
+inline __device__ void CrossoverUniformFlip(Gene& GeneOffspring1, Gene& GeneOffspring2,
+                                            Gene GeneParent1    , Gene GeneParent2,
                                             unsigned int RandomValue){
 
 
@@ -356,7 +356,7 @@ inline __device__ void CrossoverUniformFlip(TGene& GeneOffspring1, TGene& GeneOf
  * @param       BitID          - Bit to mutate
 
  */
-inline __device__ void MutationBitFlip(TGene& GeneOffspring1, TGene& GeneOffspring2,
+inline __device__ void MutationBitFlip(Gene& GeneOffspring1, Gene& GeneOffspring2,
                                       unsigned int RandomValue1,unsigned int RandomValue2, int BitID){
 
   //GeneOffspring1 ^= ((unsigned int)(RandomValue1 < GPU_EvolutionParameters.MutationUINTBoundary) << BitID);
@@ -403,30 +403,30 @@ void checkAndReportCudaError(const char* sourceFileName,
  * @params   RandomNumbers
  *
  */
-__global__ void FirstPopulationGenerationKernel(TPopulationData * PopData, unsigned int RandomSeed){
+__global__ void FirstPopulationGenerationKernel(PopulationData * PopData, unsigned int RandomSeed){
 
    size_t i      = threadIdx.x + blockIdx.x*blockDim.x;
    size_t stride = blockDim.x * gridDim.x;
 
    RNG_2x32::ctr_type RandomValues;
 
-   const int PopulationDIM = PopData->ChromosomeSize * PopData->PopulationSize;
+   const int PopulationDIM = PopData->chromosomeSize * PopData->populationSize;
 
    while (i < PopulationDIM) {
 
        TwoRandomINTs(&RandomValues, i, RandomSeed);
-       PopData->Population[i] = RandomValues.v[0];
+       PopData->population[i] = RandomValues.v[0];
 
        i += stride;
        if (i < PopulationDIM) {
-          PopData->Population[i] = RandomValues.v[1];
+          PopData->population[i] = RandomValues.v[1];
        }
        i += stride;
     }
 
    i  = threadIdx.x + blockIdx.x*blockDim.x;
-   while (i < PopData->PopulationSize){
-        PopData->Fitness[i]    = 0.0f;
+   while (i < PopData->populationSize){
+        PopData->fitness[i]    = 0.0f;
         i += stride;
    }
 
@@ -446,7 +446,7 @@ __global__ void FirstPopulationGenerationKernel(TPopulationData * PopData, unsig
  * @param RandomSeed
  *
  */
-__global__ void GeneticManipulationKernel(TPopulationData * ParentsData, TPopulationData * OffspringData,
+__global__ void GeneticManipulationKernel(PopulationData * ParentsData, PopulationData * OffspringData,
                                     unsigned int RandomSeed){
     int GeneIdx       = threadIdx.x;
     int ChromosomeIdx = 2* (threadIdx.y + blockIdx.y * blockDim.y);
@@ -489,11 +489,11 @@ __global__ void GeneticManipulationKernel(TPopulationData * ParentsData, TPopula
 
     //-- Go through two chromosomes and do uniform crossover and mutation--//
     while (GeneIdx < gpuEvolutionParameters.chromosomeSize){
-        TGene GeneParent1 = ParentsData->Population[GetIndex(Parent1_Idx[threadIdx.y], GeneIdx)];
-        TGene GeneParent2 = ParentsData->Population[GetIndex(Parent2_Idx[threadIdx.y], GeneIdx)];
+        Gene GeneParent1 = ParentsData->population[GetIndex(Parent1_Idx[threadIdx.y], GeneIdx)];
+        Gene GeneParent2 = ParentsData->population[GetIndex(Parent2_Idx[threadIdx.y], GeneIdx)];
 
-        TGene GeneOffspring1 = 0;
-        TGene GeneOffspring2 = 0;
+        Gene GeneOffspring1 = 0;
+        Gene GeneOffspring2 = 0;
 
         //-- crossover --//
         if (CrossoverFlag[threadIdx.y]) {
@@ -520,8 +520,8 @@ __global__ void GeneticManipulationKernel(TPopulationData * ParentsData, TPopula
 
          }// for
 
-        OffspringData->Population[GetIndex(ChromosomeIdx  , GeneIdx)] = GeneOffspring1;
-        OffspringData->Population[GetIndex(ChromosomeIdx+1, GeneIdx)] = GeneOffspring2;
+        OffspringData->population[GetIndex(ChromosomeIdx  , GeneIdx)] = GeneOffspring1;
+        OffspringData->population[GetIndex(ChromosomeIdx+1, GeneIdx)] = GeneOffspring2;
 
         GeneIdx += WARP_SIZE;
     }
@@ -540,7 +540,7 @@ __global__ void GeneticManipulationKernel(TPopulationData * ParentsData, TPopula
  * @param OffspringData
  * @param RandomSeed
  */
-__global__ void ReplacementKernel(TPopulationData * ParentsData, TPopulationData * OffspringData, unsigned int RandomSeed){
+__global__ void ReplacementKernel(PopulationData * ParentsData, PopulationData * OffspringData, unsigned int RandomSeed){
 
 
 
@@ -565,15 +565,15 @@ __global__ void ReplacementKernel(TPopulationData * ParentsData, TPopulationData
 
 
     //------- replacement --------//
-    if (ParentsData->Fitness[ChromosomeIdx] < OffspringData->Fitness[OffspringIdx_SHM[threadIdx.y]]){
+    if (ParentsData->fitness[ChromosomeIdx] < OffspringData->fitness[OffspringIdx_SHM[threadIdx.y]]){
 
         //-- copy data --//
         while (GeneIdx < gpuEvolutionParameters.chromosomeSize){
-            ParentsData->Population[GetIndex(ChromosomeIdx, GeneIdx)] = OffspringData->Population[GetIndex(OffspringIdx_SHM[threadIdx.y], GeneIdx)];
+            ParentsData->population[GetIndex(ChromosomeIdx, GeneIdx)] = OffspringData->population[GetIndex(OffspringIdx_SHM[threadIdx.y], GeneIdx)];
             GeneIdx +=  WARP_SIZE;
         }
 
-        if (threadIdx.x == 0) ParentsData->Fitness[ChromosomeIdx] = OffspringData->Fitness[OffspringIdx_SHM[threadIdx.y]];
+        if (threadIdx.x == 0) ParentsData->fitness[ChromosomeIdx] = OffspringData->fitness[OffspringIdx_SHM[threadIdx.y]];
 
     } // replacement
 
@@ -593,14 +593,14 @@ __global__ void ReplacementKernel(TPopulationData * ParentsData, TPopulationData
  * @param GPULock
  *
  */
-__global__ void CalculateStatistics(StatisticsData * StatisticsData, TPopulationData * PopData){
+__global__ void CalculateStatistics(StatisticsData * StatisticsData, PopulationData * PopData){
 
   int i      = threadIdx.x + blockDim.x*blockIdx.x;
   int stride = blockDim.x*gridDim.x;
 
-  __shared__ TFitness shared_Max    [BLOCK_SIZE];
+  __shared__ Fitness shared_Max    [BLOCK_SIZE];
   __shared__ int      shared_Max_Idx[BLOCK_SIZE];
-  __shared__ TFitness shared_Min    [BLOCK_SIZE];
+  __shared__ Fitness shared_Min    [BLOCK_SIZE];
 
   __shared__ float shared_Sum    [BLOCK_SIZE];
   __shared__ float shared_Sum2   [BLOCK_SIZE];
@@ -608,21 +608,21 @@ __global__ void CalculateStatistics(StatisticsData * StatisticsData, TPopulation
 
     //-- Clear shared buffer --//
 
-  shared_Max    [threadIdx.x] = TFitness(0);
+  shared_Max    [threadIdx.x] = Fitness(0);
   shared_Max_Idx[threadIdx.x] = 0;
-  shared_Min    [threadIdx.x] = TFitness(UINT_MAX);
+  shared_Min    [threadIdx.x] = Fitness(UINT_MAX);
 
   shared_Sum    [threadIdx.x] = 0.0f;;
   shared_Sum2   [threadIdx.x] = 0.0f;;
 
   __syncthreads();
 
-  TFitness FitnessValue;
+  Fitness FitnessValue;
 
   //-- Reduction to shared memory --//
   while (i < gpuEvolutionParameters.populationSize){
 
-      FitnessValue = PopData->Fitness[i];
+      FitnessValue = PopData->fitness[i];
       if (FitnessValue > shared_Max[threadIdx.x]){
           shared_Max    [threadIdx.x] = FitnessValue;
           shared_Max_Idx[threadIdx.x] = i;
@@ -697,7 +697,7 @@ __global__ void CalculateStatistics(StatisticsData * StatisticsData, TPopulation
  * @param GlobalData
  *
  */
-__global__ void CalculateKnapsackFintess(TPopulationData * PopData, KnapsackData * GlobalData){
+__global__ void CalculateKnapsackFintess(PopulationData * PopData, KnapsackData * GlobalData){
 
 
     __shared__ PriceType  PriceGlobalData_SHM [WARP_SIZE];
@@ -711,9 +711,9 @@ __global__ void CalculateKnapsackFintess(TPopulationData * PopData, KnapsackData
     int GeneInBlockIdx = threadIdx.x;
     int ChromosomeIdx  = threadIdx.y + blockIdx.y * blockDim.y;
 
-    if (ChromosomeIdx >= PopData->PopulationSize) return;
+    if (ChromosomeIdx >= PopData->populationSize) return;
 
-    TGene ActGene;
+    Gene ActGene;
 
     //------------------------------------------------------//
 
@@ -731,7 +731,7 @@ __global__ void CalculateKnapsackFintess(TPopulationData * PopData, KnapsackData
                 WeightGlobalData_SHM[GeneInBlockIdx] = GlobalData->itemWeight[IntBlockIdx * gpuEvolutionParameters.intBlockSize + GeneInBlockIdx];
         }
 
-        ActGene = ((PopData->Population[GetIndex(ChromosomeIdx, IntBlockIdx)]) >> GeneInBlockIdx) & TGene(1);
+        ActGene = ((PopData->population[GetIndex(ChromosomeIdx, IntBlockIdx)]) >> GeneInBlockIdx) & Gene(1);
 
         __syncthreads();
 
@@ -758,18 +758,18 @@ __global__ void CalculateKnapsackFintess(TPopulationData * PopData, KnapsackData
     // threadIdx.x ==0 calculate final Fitness --//
     if (threadIdx.x == 0){
 
-        TFitness result = TFitness(PriceValues_SHM [threadIdx.y][0]);
+        Fitness result = Fitness(PriceValues_SHM [threadIdx.y][0]);
 
 
         if (WeightValues_SHM[threadIdx.y][0] > GlobalData->knapsackCapacity){
-            TFitness Penalty = (WeightValues_SHM[threadIdx.y][0] - GlobalData->knapsackCapacity);
+            Fitness Penalty = (WeightValues_SHM[threadIdx.y][0] - GlobalData->knapsackCapacity);
 
             result = result  - GlobalData->maxPriceWightRatio * Penalty;
-            if (result < 0 ) result = TFitness(0);
+            if (result < 0 ) result = Fitness(0);
             //result = TFitness(0);
         }
 
-        PopData->Fitness[ChromosomeIdx] = result;
+        PopData->fitness[ChromosomeIdx] = result;
 
 
    } // if
@@ -786,19 +786,19 @@ __global__ void CalculateKnapsackFintess(TPopulationData * PopData, KnapsackData
  * @param ParentsData
  *
  */
-__device__ int FindTheBestLocation(int threadIdx1D, TPopulationData * ParentsData){
+__device__ int FindTheBestLocation(int threadIdx1D, PopulationData * ParentsData){
 
 
-  __shared__ TFitness shared_Max    [BLOCK_SIZE];
+  __shared__ Fitness shared_Max    [BLOCK_SIZE];
   __shared__ int      shared_Max_Idx[BLOCK_SIZE];
 
 
     //-- Clear shared buffer --//
-  shared_Max    [threadIdx1D] = TFitness(0);
+  shared_Max    [threadIdx1D] = Fitness(0);
   shared_Max_Idx[threadIdx1D] = 0;
 
 
-  TFitness FitnessValue;
+  Fitness FitnessValue;
 
   int i = threadIdx1D;
 
@@ -806,7 +806,7 @@ __device__ int FindTheBestLocation(int threadIdx1D, TPopulationData * ParentsDat
   //-- Reduction to shared memory --//
   while (i < gpuEvolutionParameters.populationSize){
 
-      FitnessValue = ParentsData->Fitness[i];
+      FitnessValue = ParentsData->fitness[i];
       if (FitnessValue > shared_Max[threadIdx1D]){
           shared_Max    [threadIdx1D] = FitnessValue;
           shared_Max_Idx[threadIdx1D] = i;
@@ -846,7 +846,7 @@ __device__ int FindTheBestLocation(int threadIdx1D, TPopulationData * ParentsDat
  * @param RandomSeed
  *
  */
-__global__ void SelectEmigrantsKernel(TPopulationData * ParentsData, TPopulationData * EmigrantsToSend,
+__global__ void SelectEmigrantsKernel(PopulationData * ParentsData, PopulationData * EmigrantsToSend,
                                       unsigned int RandomSeed){
 
     int GeneIdx       = threadIdx.x;
@@ -888,11 +888,11 @@ __global__ void SelectEmigrantsKernel(TPopulationData * ParentsData, TPopulation
     //------------------------ data copy -------------------------------------//
 
     while (GeneIdx < gpuEvolutionParameters.chromosomeSize){
-        EmigrantsToSend->Population[GetIndex(ChromosomeIdx, GeneIdx)] = ParentsData->Population[GetIndex(EmigrantIdx_SHM[threadIdx.y], GeneIdx)];
+        EmigrantsToSend->population[GetIndex(ChromosomeIdx, GeneIdx)] = ParentsData->population[GetIndex(EmigrantIdx_SHM[threadIdx.y], GeneIdx)];
         GeneIdx +=  WARP_SIZE;
     }
 
-    if (threadIdx.x == 0) EmigrantsToSend->Fitness[ChromosomeIdx] = ParentsData->Fitness[EmigrantIdx_SHM[threadIdx.y]];
+    if (threadIdx.x == 0) EmigrantsToSend->fitness[ChromosomeIdx] = ParentsData->fitness[EmigrantIdx_SHM[threadIdx.y]];
 
 
 } // end of SelectEmigrantsKernel
@@ -908,7 +908,7 @@ __global__ void SelectEmigrantsKernel(TPopulationData * ParentsData, TPopulation
  * @param RandomSeed
  *
  */
-__global__ void AcceptEmigrantsKernel(TPopulationData * ParentsData, TPopulationData *  EmigrantsToReceive,
+__global__ void AcceptEmigrantsKernel(PopulationData * ParentsData, PopulationData *  EmigrantsToReceive,
                                       unsigned int RandomSeed ){
 
     int GeneIdx       = threadIdx.x;
@@ -938,15 +938,15 @@ __global__ void AcceptEmigrantsKernel(TPopulationData * ParentsData, TPopulation
     //------------------------------------------------------//
 
     //------- replacement --------//
-    if (ParentsData->Fitness[ParentToRelaceIdx[threadIdx.y]] < EmigrantsToReceive->Fitness[ChromosomeIdx]){
+    if (ParentsData->fitness[ParentToRelaceIdx[threadIdx.y]] < EmigrantsToReceive->fitness[ChromosomeIdx]){
 
         //-- copy data --//
         while (GeneIdx < gpuEvolutionParameters.chromosomeSize){
-            ParentsData->Population[GetIndex(ParentToRelaceIdx[threadIdx.y], GeneIdx)] = EmigrantsToReceive->Population[GetIndex(ChromosomeIdx, GeneIdx)];
+            ParentsData->population[GetIndex(ParentToRelaceIdx[threadIdx.y], GeneIdx)] = EmigrantsToReceive->population[GetIndex(ChromosomeIdx, GeneIdx)];
             GeneIdx +=  WARP_SIZE;
         }
 
-        if (threadIdx.x == 0) ParentsData->Fitness[ParentToRelaceIdx[threadIdx.y]] = EmigrantsToReceive->Fitness[ChromosomeIdx];
+        if (threadIdx.x == 0) ParentsData->fitness[ParentToRelaceIdx[threadIdx.y]] = EmigrantsToReceive->fitness[ChromosomeIdx];
 
     } // replacement
 

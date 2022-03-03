@@ -61,14 +61,14 @@ protected:
 
 
 
-    TGPU_Population*  MasterPopulation;        // Master GA population
-    TGPU_Population*  OffspringPopulation;     // Population of offsprings
+    GPUPopulation*  MasterPopulation;        // Master GA population
+    GPUPopulation*  OffspringPopulation;     // Population of offsprings
 
-    TGPU_Population*  GPU_EmigrantsToSend;     // Emigrants to send
-    TGPU_Population*  GPU_EmigrantsToReceive;  // Emigrants to receive
+    GPUPopulation*  GPU_EmigrantsToSend;     // Emigrants to send
+    GPUPopulation*  GPU_EmigrantsToReceive;  // Emigrants to receive
 
-    TCPU_Population*  CPU_EmigrantsToSend;     // Buffer for individuals to send
-    TCPU_Population*  CPU_EmigrantsToReceive;  // Buffer for individuals to receive
+    CPUPopulation*  CPU_EmigrantsToSend;     // Buffer for individuals to send
+    CPUPopulation*  CPU_EmigrantsToReceive;  // Buffer for individuals to receive
 
     Statistics*  GPUStatistics;           // Statistics over GA process
 

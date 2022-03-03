@@ -1,126 +1,174 @@
-/* 
- * File:        Population.h
- * Author:      Jiri Jaros
- * Affiliation: Brno University of Technology
+/**
+ * @file        Population.h
+ * @author      Jiri Jaros
+ *              Brno University of Technology
  *              Faculty of Information Technology
- *              
+ *
  *              and
- * 
+ *
  *              The Australian National University
  *              ANU College of Engineering & Computer Science
  *
- * Email:       jarosjir@fit.vutbr.cz
- * Web:         www.fit.vutbr.cz/~jarosjir
- * 
- * Comments:    Header file of the GA population
- *              This class maintains and GA populations
+ *              jarosjir@fit.vutbr.cz
+ *              www.fit.vutbr.cz/~jarosjir
  *
- * 
- * License:     This source code is distribute under OpenSource GNU GPL license
- *                
- *              If using this code, please consider citation of related papers
- *              at http://www.fit.vutbr.cz/~jarosjir/pubs.php        
- *      
+ * @brief       Header file of the GA population.
+ *              This class maintains and GA populations.
  *
- * 
- * Created on 08 June 2012, 00:00 PM
+ * @date        08 June      2012, 00:00 (created)
+ *              02 March     2022, 14:14 (revised)
+ *
+ * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
+ *
+ * This source code is distribute under OpenSouce GNU GPL license.
+ * If using this code, please consider citation of related papers
+ * at http://www.fit.vutbr.cz/~jarosjir/pubs.php
+ *
  */
-
 
 #ifndef POPULATION_H
 #define POPULATION_H
 
 #include <string>
 
-using namespace std;
-
 // Basic types
-typedef unsigned int TGene;
-typedef float        TFitness;
+/// Data type for Gene.
+using Gene    = unsigned int;
+/// Data type for fitness value
+using Fitness = float;
 
-
-
-/*
- * Population data
+/**
+ * @class Population
+ * @brief CPU version of GA Population
  */
-struct TPopulationData{
-    unsigned int PopulationSize;        // Number of chromosomes
-    unsigned int ChromosomeSize;        // Size of chromosome in INTs
-    
-    TGene    * Population;              // 1D array of genes (chromosome-based encoding)
-    TFitness * Fitness;                 // 1D array of fitness values      
-};// end of TPopulationData
-//------------------------------------------------------------------------------
+struct PopulationData
+{
+  /// Number of chromosomes.
+  unsigned int populationSize = 0;
+  /// Size of chromosome in INTs.
+  unsigned int chromosomeSize = 0;
 
+  /// 1D array of genes (chromosome-based encoding).
+  Gene*    population = nullptr;
+  /// 1D array of fitness values.
+  Fitness* fitness = nullptr;
+};// end of PopulationData
+//----------------------------------------------------------------------------------------------------------------------
 
-
-
-/*
- * GPU population 
- * 
+/**
+ * @class GPUPopulation
+ * @brief Population stored on the GPU.
  */
-class TGPU_Population{
-public:
-    TPopulationData * DeviceData;        // Hander on the GPU data 
-    
-    // Constructor    
-    TGPU_Population(const int PopulationSize, const int ChromosomeSize);
+class GPUPopulation
+{
+  public:
+    /// Default constructor not allowed.
+    GPUPopulation() = delete;
+    /// Copy constructor not allowed.
+    GPUPopulation(const GPUPopulation& orig) = delete;
 
-    // Copy data  Host   -> Device
-    void CopyIn      (const TPopulationData * HostSource);        
-    // Copy data Device -> Host    
-    void CopyOut     (TPopulationData       * HostDestination);   
-    // Copy data Device -> Device;    
-    void CopyDeviceIn(const TGPU_Population * GPUPopulation);     // Device -> Device;
-    // Copy an individal down to host    
-    void CopyOutIndividual(TGene * Individual, int Index);
-    
-    // Destructor    
-    virtual ~TGPU_Population();
-protected:
-    // Memory allocation    
-    void AllocateCudaMemory();
-    void FreeCudaMemory();
-    
-private:
-    // Host copy of population    
-    TPopulationData FHost_Handlers;
-                
-    TGPU_Population();
-    TGPU_Population(const TGPU_Population& orig);
-        
-};// end of TGPU_Population
-//------------------------------------------------------------------------------
+    /**
+     * Constructor
+     * @param [in] populationSize - Number of chromosomes.
+     * @param [in] chromosomeSize - Length of chromosomes.
+     */
+    GPUPopulation(const int populationSize,
+                  const int chromosomeSize);
+    /// Destructor
+    virtual ~GPUPopulation();
+
+    /// Assignment operator not allowed
+    GPUPopulation& operator=(const GPUPopulation&) = delete;
 
 
+    /// Get pointer to device population data.
+    PopulationData* getDeviceData()             { return mDeviceData; };
+    /// Get pointer to device population data, const version.
+    const PopulationData* getDeviceData() const { return mDeviceData; };
 
+    /**
+     * @brief Copy data from CPU population structure to GPU.
+     * Both population must have the same size (sizes not being copied)!!
+     *
+     * @param [in] hostPopulation - Source of population data on the host side.
+    */
+    void copyToDevice(const PopulationData* hostPopulation);
+    /**
+     * @brief Copy data from GPU population structure to CPU.
+     * Both population must have the same size (sizes not copied)!!
+     *
+     * @param [out] hostPopulation - Source of population data on the host side
+     */
+    void copyFromDevice(PopulationData* hostPopulation);
+    /**
+     * @brief Copy data from different population (both on the same GPU)
+     * No size check!!!
+     *
+     * @param [in] sourceDevicePopulation - Source population.
+     */
+    void copyOnDevice(const GPUPopulation* sourceDevicePopulation);
 
-/*
- * CPU Population
- * 
+    /**
+     * Copy a given individual from device to host
+     * @param [out] individual - Where to store an individual.
+     * @param [in]  index      - Index of the individual in device population
+     */
+    void copyIndividualFromDevice(Gene* individual,
+                                  int   index);
+
+  protected:
+    /// Allocate memory.
+    void allocateMemory();
+    /// Free memory.
+    void freeMemory();
+
+  private:
+    /// Hander on the GPU data
+    PopulationData* mDeviceData;
+
+    /// Host copy of population
+    PopulationData  mHostPopulationHandler;
+};// end of GPUPopulation
+//----------------------------------------------------------------------------------------------------------------------
+
+/**
+ * @class CPUPopulation
+ * @brief Population stored on the host side.
  */
-class TCPU_Population{
-public:
-    TPopulationData * HostData; // host data
-        
-    TCPU_Population(const int PopulationSize, const int ChromosomeSize);
-    
-    // Get string representation of chromosome
-    string GetStringOfChromosome(const int Idx);
-    
-    virtual ~TCPU_Population();
+class CPUPopulation
+{
+  public:
+    /// Default constructor not allowed.
+    CPUPopulation() = delete;
 
-protected:
-    // Allocate memory
-    void AllocateCudaMemory();
-    void FreeCudaMemory();
-            
-private:
-    TCPU_Population();            
-    TCPU_Population(const TCPU_Population& orig);
-        
-};// end of TCPU_Population
-//------------------------------------------------------------------------------
+    /**
+     * Constructor
+     * @param [in] populationSize - Number of chromosomes.
+     * @param [in] chromosomeSize - Chromosome length.
+     */
+    CPUPopulation(const int populationSize,
+                  const int chromosomeSize);
 
-#endif	/* TGPU_POPULATION_H */
+    /// Copy constructor not allowed.
+    CPUPopulation(const CPUPopulation& orig);
 
+    /// Destructor.
+    virtual ~CPUPopulation();
+
+    /// Get pointer to device population data.
+    PopulationData* getHostData()             { return mHostData; };
+    /// Get pointer to device population data, const version.
+    const PopulationData* getHostData() const { return mHostData; };
+
+  protected:
+    /// Allocate memory
+    void allocateMemory();
+    /// Free memory
+    void freeMemory();
+  private:
+    /// Host population data
+    PopulationData* mHostData;
+};// end of CPUPopulation
+//----------------------------------------------------------------------------------------------------------------------
+
+#endif	/* POPULATION_H */

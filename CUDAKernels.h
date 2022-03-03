@@ -45,36 +45,36 @@ void checkAndReportCudaError(const char* sourceFileName,
 
 
 // First Population generation
-__global__ void FirstPopulationGenerationKernel(TPopulationData * PopData, unsigned int RandomSeed);
+__global__ void FirstPopulationGenerationKernel(PopulationData * PopData, unsigned int RandomSeed);
 
 //Genetic Manipulation (Selection, Crossover, Mutation)
-__global__ void GeneticManipulationKernel(TPopulationData * ParentsData, TPopulationData * OffspringData, unsigned int RandomSeed);
+__global__ void GeneticManipulationKernel(PopulationData * ParentsData, PopulationData * OffspringData, unsigned int RandomSeed);
 
 
 //Replacement
-__global__ void ReplacementKernel(TPopulationData * ParentsData, TPopulationData * OffspringData, unsigned int RandomSeed);
+__global__ void ReplacementKernel(PopulationData * ParentsData, PopulationData * OffspringData, unsigned int RandomSeed);
 
 
 // Calculate statistics
-__global__ void CalculateStatistics(StatisticsData * StatisticsData, TPopulationData * PopData);
+__global__ void CalculateStatistics(StatisticsData * StatisticsData, PopulationData * PopData);
 
 // Select individuals to migration
-__global__ void SelectEmigrantsKernel(TPopulationData * ParentsData, TPopulationData * EmigrantsToSend, unsigned int RandomSeed);
+__global__ void SelectEmigrantsKernel(PopulationData * ParentsData, PopulationData * EmigrantsToSend, unsigned int RandomSeed);
 
 
 // Find the location of the best
-__device__ int FindTheBestLocation(int threadIdx1D, TPopulationData * ParentsData);
+__device__ int FindTheBestLocation(int threadIdx1D, PopulationData * ParentsData);
 
 //accept emigrants
-__global__ void AcceptEmigrantsKernel(TPopulationData * ParentsData, TPopulationData *  EmigrantsToReceive, unsigned int RandomSeed);
+__global__ void AcceptEmigrantsKernel(PopulationData * ParentsData, PopulationData *  EmigrantsToReceive, unsigned int RandomSeed);
 
 
 // Calculate OneMax Fitness
-__global__ void CalculateFintessOneMax(TPopulationData * PopData);
+__global__ void CalculateFintessOneMax(PopulationData * PopData);
 
 
 // Calculate Knapsack fitness
-__global__ void CalculateKnapsackFintess(TPopulationData * PopData, KnapsackData * GlobalData);
+__global__ void CalculateKnapsackFintess(PopulationData * PopData, KnapsackData * GlobalData);
 
 
 

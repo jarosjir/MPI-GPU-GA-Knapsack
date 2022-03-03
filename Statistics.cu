@@ -16,7 +16,7 @@
  *              This class maintains and collects GA statistics
  *
  * @date        08 June 2012 2012, 00:00 (created)
- *              01 March     2022, 22:02 (revised)
+ *              03 March     2022, 11:02 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -60,7 +60,7 @@ Statistics::Statistics()
   {
     mGlobalDerivedStat       = (DerivedStats *)   memalign(64, sizeof(DerivedStats));
     mReceiveStatDataBuffer   = (StatisticsData *) memalign(64, sizeof(StatisticsData) * Params.getIslandCount());
-    mReceiveIndividualBuffer = (TGene *)          memalign(64, sizeof(TGene)
+    mReceiveIndividualBuffer = (Gene *)           memalign(64, sizeof(Gene)
                                                                 * Params.getChromosomeSize()* Params.getIslandCount());
   }
 
@@ -104,7 +104,7 @@ Statistics::~Statistics()
 std::string Statistics::getBestIndividualStr(KnapsackData* globalKnapsackData) const
 {
   /// Lambda function to convert 1 int into a bit string
-  auto convertIntToBitString= [] (TGene value, int nValidDigits) -> std::string
+  auto convertIntToBitString= [] (Gene value, int nValidDigits) -> std::string
   {
     std::string str = "";
 
@@ -146,8 +146,8 @@ std::string Statistics::getBestIndividualStr(KnapsackData* globalKnapsackData) c
 /**
  * Calculate global statistics.
  */
-void Statistics::calculate(TGPU_Population* population,
-                           bool             printBest)
+void Statistics::calculate(GPUPopulation* population,
+                           bool           printBest)
 {
   const Parameters& params = Parameters::getInstance();
 
@@ -190,9 +190,9 @@ void Statistics::allocateCudaMemory()
   checkCudaErrors(cudaHostAlloc<StatisticsData>(&mHostStatData,  sizeof(StatisticsData),cudaHostAllocDefault));
 
   // Allocate Host basic structure
-  checkCudaErrors(cudaHostAlloc<TGene>(&mLocalBestIndividual,
-                                       sizeof(TGene) * Parameters::getInstance().getChromosomeSize(),
-                                       cudaHostAllocDefault));
+  checkCudaErrors(cudaHostAlloc<Gene>(&mLocalBestIndividual,
+                                        sizeof(Gene) * Parameters::getInstance().getChromosomeSize(),
+                                        cudaHostAllocDefault));
 
   // Device data
   checkCudaErrors(cudaMalloc<StatisticsData>(&mLocalDeviceStatData,  sizeof(StatisticsData)));
@@ -222,8 +222,8 @@ void Statistics::freeCudaMemory()
  */
 void Statistics::initStatistics()
 {
-  mHostStatData->maxFitness  = TFitness(0);
-  mHostStatData->minFitness  = TFitness(UINT_MAX);
+  mHostStatData->maxFitness  = Fitness(0);
+  mHostStatData->minFitness  = Fitness(UINT_MAX);
   mHostStatData->sumFitness  = 0.0f;
   mHostStatData->sum2Fitness = 0.0f;
   mHostStatData->indexBest   = 0;
@@ -236,15 +236,15 @@ void Statistics::initStatistics()
 /**
  * Calculate local statistics and download them to the host.
  */
-void Statistics::calculateLocalStats(TGPU_Population* population,
-                                     bool             printBest)
+void Statistics::calculateLocalStats(GPUPopulation* population,
+                                     bool           printBest)
 {
   // Initialize statistics
   initStatistics();
 
   // Run the CUDA kernel to calculate statistics
   CalculateStatistics<<<Parameters::getInstance().getNumberOfDeviceSMs() * 2, BLOCK_SIZE >>>
-                     (mLocalDeviceStatData, population->DeviceData);
+                     (mLocalDeviceStatData, population->getDeviceData());
 
 
   // Copy data down to host
@@ -255,7 +255,7 @@ void Statistics::calculateLocalStats(TGPU_Population* population,
 /**
  * Copy data from GPU Statistics structure to CPU.
  */
-void Statistics::copyFromDevice(TGPU_Population* population,
+void Statistics::copyFromDevice(GPUPopulation* population,
                                 bool             printBest)
 {
   // Copy 4 statistics values
@@ -264,7 +264,7 @@ void Statistics::copyFromDevice(TGPU_Population* population,
   //  Copy of chromosome
   if (printBest)
   {
-    population->CopyOutIndividual(mLocalBestIndividual, mHostStatData->indexBest);
+    population->copyIndividualFromDevice(mLocalBestIndividual, mHostStatData->indexBest);
   }
 }// end of copyFromDevice
 //----------------------------------------------------------------------------------------------------------------------

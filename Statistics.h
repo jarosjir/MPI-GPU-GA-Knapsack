@@ -15,8 +15,8 @@
  * @brief       Header file of the GA statistics
  *              This class maintains and collects GA statistics
  *
- * @date        08 June 2012 2012, 00:00 (created)
- *              28 February  2022, 16:23 (revised)
+ * @date        08 June      2012, 00:00 (created)
+ *              28 March     2022, 11:02 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -42,9 +42,9 @@
 struct StatisticsData
 {
   /// Minimum fitness value in population.
-  TFitness minFitness  = TFitness(0);
+  Fitness minFitness   = Fitness(0);
   /// Maximum fitness value in population.
-  TFitness maxFitness  = TFitness(0);
+  Fitness maxFitness   = Fitness(0);
 
   /// Sum of fitness to calculate average.
   float    sumFitness  = 0.f;
@@ -92,8 +92,8 @@ class Statistics
      * @param [in] population - Population to calculate statistics of.
      * @param [in] printBest  - do we need to download the best individual to print.
      */
-    void   calculate(TGPU_Population* population,
-                     bool             printBest);
+    void   calculate(GPUPopulation* population,
+                     bool           printBest);
 
     /**
      * Get best individual in text form.
@@ -105,15 +105,15 @@ class Statistics
 
     //-------------------------------------------- Getters for root rank ---------------------------------------------//
     /// Get minimum fitness.
-    TFitness getMinFitness()           const {return mHostStatData->minFitness;};
+    Fitness getMinFitness()     const {return mHostStatData->minFitness;};
     /// Get maximum fitness.
-    TFitness getMaxFitness()           const {return mHostStatData->maxFitness;};
+    Fitness getMaxFitness()     const {return mHostStatData->maxFitness;};
     /// Get average fitness.
-    float    getAvgFitness()           const {return mGlobalDerivedStat->avgFitness;};
+    float    getAvgFitness()    const {return mGlobalDerivedStat->avgFitness;};
     /// Get divergence.
-    float    getDivergence()           const {return mGlobalDerivedStat->divergence;};
+    float    getDivergence()    const {return mGlobalDerivedStat->divergence;};
     /// Get best Island id.
-    int      getBestIslandIdx()        const {return mGlobalDerivedStat->bestIslandIdx;};
+    int      getBestIslandIdx() const {return mGlobalDerivedStat->bestIslandIdx;};
 
   protected:
     /// Allocate memory on device side.
@@ -129,8 +129,8 @@ class Statistics
      * @param [in,out] population - Population to calculate the statistics on.
      * @param [in]     printBest  - Shall I print best solution?
      */
-    void calculateLocalStats(TGPU_Population* population,
-                             bool             printBest);
+    void calculateLocalStats(GPUPopulation* population,
+                             bool           printBest);
 
     /**
      * Calculate Global statistics.
@@ -143,8 +143,8 @@ class Statistics
      * @param [in] population - Population to take the best solution from.
      * @param [in] printBest  - Shall I print best solution?
      */
-    void copyFromDevice(TGPU_Population* population,
-                        bool             printBest);
+    void copyFromDevice(GPUPopulation* population,
+                        bool           printBest);
 
     /// Statistics on the local device.
     StatisticsData* mLocalDeviceStatData;
@@ -157,9 +157,9 @@ class Statistics
     DerivedStats*   mGlobalDerivedStat;
 
     // Host copy of the best solution / global best.
-    TGene*          mLocalBestIndividual;
+    Gene*           mLocalBestIndividual;
     // All the best solutions from all nodes, root rank only.
-    TGene*          mReceiveIndividualBuffer;
+    Gene*           mReceiveIndividualBuffer;
 
   private:
 };// end of Statistics
