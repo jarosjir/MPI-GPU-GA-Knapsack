@@ -16,7 +16,7 @@
  *              Genetic Algorithm, solving the Knapsack problem.
  *
  * @date        08 June      2012, 00:00 (created)
- *              03 March     2022, 11:09 (revised)
+ *              11 April     2022, 17:51 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -33,7 +33,7 @@
 #include "Evolution.h"
 #include "Parameters.h"
 
-/*
+/**
  * The main function
  */
 int main(int argc, char **argv)
@@ -45,22 +45,24 @@ int main(int argc, char **argv)
   Evolution evolution(argc,argv);
 
   // Start time
-  double AlgorithmStartTime;
+  double algorithmStartTime;
   MPI_Barrier(MPI_COMM_WORLD);
-  AlgorithmStartTime = MPI_Wtime();
+  algorithmStartTime = MPI_Wtime();
 
-  // Run evolutin process.
+  // Run evolution process.
   evolution.run();
 
-  // Run evolution
+  // Run evolution.
   MPI_Barrier(MPI_COMM_WORLD);
 
-  double AlgorithmStopTime = MPI_Wtime();
+  // Print execution time.
+  double algorithmStopTime = MPI_Wtime();
   if (evolution.isMaster())
   {
-    printf("Execution time: %0.3f s.\n",  AlgorithmStopTime - AlgorithmStartTime);
+    printf("Execution time: %0.3f s.\n",  algorithmStopTime - algorithmStartTime);
   }
 
+  // Finalize.
   MPI_Finalize();
   return EXIT_SUCCESS;
 }// end of main

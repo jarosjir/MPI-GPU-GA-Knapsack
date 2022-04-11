@@ -16,7 +16,7 @@
  *              This class controls the evolution process on multiple GPUs across many nodes.
  *
  * @date        08 June      2012, 00:00 (created)
- *              03 March     2022, 11:09 (revised)
+ *              11 April     2022, 21:01 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -47,8 +47,8 @@ class Evolution
     Evolution() = delete;
     /**
      * Constructor commandline parameters.
-     * @param [] argc - Argument counts
-     * @param [] argv - Commandline argiments.
+     * @param [in] argc - Argument counts
+     * @param [in] argv - Commandline arguments.
      */
     Evolution(int argc, char **argv);
 
@@ -62,7 +62,7 @@ class Evolution
     /// Run evolution.
     void run();
 
-    // Is this the master node?
+    /// Is this the master node?
     bool isMaster() const { return mParams.getIslandIdx() == 0; };
 
 
@@ -107,6 +107,7 @@ class Evolution
     /// Global data of knapsack.
     GlobalKnapsackData mGlobalData;
 
+    /// MPI tag used to exchange individuals.
     static constexpr int kMpiDataTag = 100;
 };// end of Evolution
 //----------------------------------------------------------------------------------------------------------------------

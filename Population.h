@@ -38,7 +38,7 @@ using Gene    = unsigned int;
 using Fitness = float;
 
 /**
- * @class Population
+ * @struct PopulationData
  * @brief CPU version of GA Population
  */
 struct PopulationData

@@ -16,7 +16,7 @@
  *              This class maintains all the parameters of evolution.
  *
  * @date        30 March     2012, 00:00 (created)
- *              25 February  2022, 19:43 (revised)
+ *              11 April     2022, 21:00 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -35,11 +35,11 @@
 //------------------------------------------------- CUDA constants ---------------------------------------------------//
 //--------------------------------------------------------------------------------------------------------------------//
 
-/// Number of threads per block
+/// Number of threads per block,
 constexpr int BLOCK_SIZE = 256;
-/// Warp size
+/// Warp size,
 constexpr int WARP_SIZE  = 32;
-/// Number of chromosomes per block
+/// Number of chromosomes per block - to correct functionality CHR_PER_BLOCK < WARP_SIZE.
 constexpr int CHR_PER_BLOCK = (BLOCK_SIZE / WARP_SIZE);
 
 /**
@@ -71,7 +71,7 @@ struct EvolutionParameters
   int emigrantCount;
   /// Migration interval (how often to migrate).
   int migrationInterval;
-  // Index of the island.
+  /// Index of the island.
   int islandIdx;
   /// Number of independent islands.
   int islandCount;

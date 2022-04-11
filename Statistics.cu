@@ -16,7 +16,7 @@
  *              This class maintains and collects GA statistics
  *
  * @date        08 June 2012 2012, 00:00 (created)
- *              03 March     2022, 11:02 (revised)
+ *              11 April     2022, 20:57 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -94,7 +94,6 @@ Statistics::~Statistics()
   }
 
   freeCudaMemory();
-
 }// end of Statistics
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -191,12 +190,11 @@ void Statistics::allocateCudaMemory()
 
   // Allocate Host basic structure
   checkCudaErrors(cudaHostAlloc<Gene>(&mLocalBestIndividual,
-                                        sizeof(Gene) * Parameters::getInstance().getChromosomeSize(),
-                                        cudaHostAllocDefault));
+                                      sizeof(Gene) * Parameters::getInstance().getChromosomeSize(),
+                                      cudaHostAllocDefault));
 
   // Device data
   checkCudaErrors(cudaMalloc<StatisticsData>(&mLocalDeviceStatData,  sizeof(StatisticsData)));
-
 }// end of allocateCudaMemory
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -213,7 +211,6 @@ void Statistics::freeCudaMemory()
 
   // Free whole structure
   checkCudaErrors(cudaFree(mLocalDeviceStatData));
-
 }// end of freeCudaMemory
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -243,8 +240,8 @@ void Statistics::calculateLocalStats(GPUPopulation* population,
   initStatistics();
 
   // Run the CUDA kernel to calculate statistics
-  CalculateStatistics<<<Parameters::getInstance().getNumberOfDeviceSMs() * 2, BLOCK_SIZE >>>
-                     (mLocalDeviceStatData, population->getDeviceData());
+  cudaCalculateStatistics<<<Parameters::getInstance().getNumberOfDeviceSMs() * 2, BLOCK_SIZE >>>
+                         (mLocalDeviceStatData, population->getDeviceData());
 
 
   // Copy data down to host

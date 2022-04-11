@@ -1,31 +1,31 @@
-# 
-# File:        Makefile
-# Author:      Jiri Jaros
-# Affiliation: Brno University of Technology
+# @file        Makefile
+# @author      Jiri Jaros
+#              Brno University of Technology
 #              Faculty of Information Technology
-#              
+#
 #              and
-# 
+#
 #              The Australian National University
 #              ANU College of Engineering & Computer Science
 #
-# Email:       jarosjir@fit.vutbr.cz
-# Web:         www.fit.vutbr.cz/~jarosjir
-# 
-# Comments:    Efficient MPI Island-based Multi-GPU implementation of 
-#              the Genetic Algorithm, solving the Knapsack problem.
+#              jarosjir@fit.vutbr.cz
+#              www.fit.vutbr.cz/~jarosjir
 #
-# 
-# License:     This source code is distribute under OpenSource GNU GPL license
-#                
-#              If using this code, please consider citation of related papers
-#              at http://www.fit.vutbr.cz/~jarosjir/pubs.php        
-#      
+# @brief       Header file of the knapsack global data class.
+#              Data resides in GPU memory
+#              This class maintains the benchmark data
 #
-# 
-# Created on 08 June 2012, 00:00 PM
-# Last midification on 21 February  2022, 19:14
+# @date        08 June      2012, 00:00 (created)
+#              11 April     2022, 21:10 (revised)
 #
+# @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
+#
+# This source code is distribute under OpenSouce GNU GPL license.
+# If using this code, please consider citation of related papers
+# at http://www.fit.vutbr.cz/~jarosjir/pubs.php
+#
+
+
 
 
 # Environment
@@ -43,7 +43,6 @@ CUDA_ARCH = --generate-code arch=compute_50,code=sm_50 \
             --generate-code arch=compute_75,code=sm_75 \
             --generate-code arch=compute_80,code=sm_80 \
             --generate-code arch=compute_86,code=sm_86
-
 
 
 

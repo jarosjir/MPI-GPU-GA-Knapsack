@@ -16,7 +16,7 @@
  *              This class maintains and collects GA statistics
  *
  * @date        08 June      2012, 00:00 (created)
- *              28 March     2022, 11:02 (revised)
+ *              11 April     2022, 20:52 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -65,14 +65,14 @@ struct DerivedStats
   float avgFitness    = 0.f;
   /// Divergence
   float divergence    = 0.f;
-  // Index of the best island.
+  /// Index of the best island.
   int   bestIslandIdx = 0.f;
 };// DerivedStats
 //----------------------------------------------------------------------------------------------------------------------
 
 /**
  * @class Statistics
- * @brief statistics class.
+ * @brief Statistics class.
  */
 class Statistics
 {
@@ -85,7 +85,6 @@ class Statistics
     virtual ~Statistics();
     /// Assignment operator not allowed.
     Statistics& operator=(const Statistics&) = delete;
-
 
     /**
      * Calculate statistics
@@ -156,9 +155,9 @@ class Statistics
     /// Global derived statistics, root rank only.
     DerivedStats*   mGlobalDerivedStat;
 
-    // Host copy of the best solution / global best.
+    /// Host copy of the best solution / global best.
     Gene*           mLocalBestIndividual;
-    // All the best solutions from all nodes, root rank only.
+    /// All the best solutions from all nodes, root rank only.
     Gene*           mReceiveIndividualBuffer;
 
   private:

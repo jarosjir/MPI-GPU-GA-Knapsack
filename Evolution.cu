@@ -16,7 +16,7 @@
  *              This class controls the evolution process on multiple GPUs across many nodes.
  *
  * @date        08 June      2012, 00:00 (created)
- *              03 March     2022, 11:09 (revised)
+ *              11 April     2022, 21:02 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -144,9 +144,9 @@ void Evolution::initialize()
 
 
   // Initialize population
-  FirstPopulationGenerationKernel<<<mParams.getNumberOfDeviceSMs() * 2, BLOCK_SIZE>>>
-                                 (mMasterPopulation->getDeviceData(),
-                                  getRandomSeed());
+  cudaGenerateFirstPopulation<<<mParams.getNumberOfDeviceSMs() * 2, BLOCK_SIZE>>>
+                             (mMasterPopulation->getDeviceData(),
+                              getRandomSeed());
 
   dim3 nBlocks;
 
@@ -160,9 +160,9 @@ void Evolution::initialize()
   nThreads.z = 1;
 
 
-  CalculateKnapsackFintess<<<nBlocks, nThreads>>>
-                          (mMasterPopulation->getDeviceData(),
-                           mGlobalData.getDeviceData());
+ cudaCalculateKnapsackFintess<<<nBlocks, nThreads>>>
+                             (mMasterPopulation->getDeviceData(),
+                             mGlobalData.getDeviceData());
 }// end of initialize
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -195,10 +195,10 @@ void Evolution::runEvolutionCycle()
                     mParams.getOffspringPopulationSize() / (CHR_PER_BLOCK << 1) + 1;
     nBlocks.z = 1;
 
-    GeneticManipulationKernel<<<nBlocks, nThreads>>>
-                             (mMasterPopulation->getDeviceData(),
-                              mOffspringPopulation->getDeviceData(),
-                              getRandomSeed());
+    cudaGeneticManipulation<<<nBlocks, nThreads>>>
+                           (mMasterPopulation->getDeviceData(),
+                            mOffspringPopulation->getDeviceData(),
+                            getRandomSeed());
 
     // Evaluation
 
@@ -208,9 +208,9 @@ void Evolution::runEvolutionCycle()
                     mParams.getOffspringPopulationSize() / (CHR_PER_BLOCK) + 1;
     nBlocks.z = 1;
 
-    CalculateKnapsackFintess<<<nBlocks, nThreads>>>
-                            (mOffspringPopulation->getDeviceData(),
-                             mGlobalData.getDeviceData());
+    cudaCalculateKnapsackFintess<<<nBlocks, nThreads>>>
+                                (mOffspringPopulation->getDeviceData(),
+                                 mGlobalData.getDeviceData());
 
 
     // Replacement
@@ -220,10 +220,10 @@ void Evolution::runEvolutionCycle()
                      mParams.getPopulationSize() / (CHR_PER_BLOCK) + 1;
     nBlocks.z = 1;
 
-    ReplacementKernel<<<nBlocks, nThreads>>>
-                     (mMasterPopulation->getDeviceData(),
-                      mOffspringPopulation->getDeviceData(),
-                      getRandomSeed());
+    cudaReplacement<<<nBlocks, nThreads>>>
+                   (mMasterPopulation->getDeviceData(),
+                    mOffspringPopulation->getDeviceData(),
+                    getRandomSeed());
 
 
     // Statistics
@@ -281,16 +281,13 @@ void Evolution::migrate()
   int mpiTarget;
   int mpiSource;
 
-  mpiTarget = (mParams.getIslandIdx() + 1) % mParams.getIslandCount(); // Send to the right
+  // Send to the right
+  mpiTarget = (mParams.getIslandIdx() + 1) % mParams.getIslandCount();
 
-  if (mParams.getIslandIdx() == 0) // Send to the left
-  {
-    mpiSource = mParams.getIslandCount() - 1;
-  }
-  else
-  {
-    mpiSource = mParams.getIslandIdx() - 1;
-  }
+  // Send to the left
+  mpiSource = (mParams.getIslandIdx() == 0) ? mpiSource = mParams.getIslandCount() - 1
+                                            : mpiSource = mParams.getIslandIdx() - 1;
+
 
   // Receive fitness values and immigrants
   MPI_Irecv(mHostEmigrantsToReceive->getHostData()->fitness,
@@ -300,6 +297,7 @@ void Evolution::migrate()
             kMpiDataTag,
             MPI_COMM_WORLD,
             &request[2]);
+
   MPI_Irecv(mHostEmigrantsToReceive->getHostData()->population,
             mParams.getEmigrantCount() * mParams.getChromosomeSize(),
             MPI_UNSIGNED,
@@ -307,7 +305,6 @@ void Evolution::migrate()
             kMpiDataTag,
             MPI_COMM_WORLD,
             &request[3]);
-
 
 
   nThreads.x = WARP_SIZE;
@@ -322,14 +319,13 @@ void Evolution::migrate()
 
 
   // Fill emigrant population
-  SelectEmigrantsKernel<<<nBlocks, nThreads>>>
-                       (mMasterPopulation->getDeviceData(),
-                        mDeviceEmigrantsToSend->getDeviceData(),
-                        getRandomSeed());
+  cudaSelectEmigrants<<<nBlocks, nThreads>>>
+                     (mMasterPopulation->getDeviceData(),
+                      mDeviceEmigrantsToSend->getDeviceData(),
+                      getRandomSeed());
 
 
   mDeviceEmigrantsToSend->copyFromDevice(mHostEmigrantsToSend->getHostData());
-
 
   // Send emigrants
   MPI_Isend(mHostEmigrantsToSend->getHostData()->fitness,
@@ -339,6 +335,7 @@ void Evolution::migrate()
             kMpiDataTag,
             MPI_COMM_WORLD,
             &request[0]);
+
   MPI_Isend(mHostEmigrantsToSend->getHostData()->population,
             mParams.getEmigrantCount() * mParams.getChromosomeSize(),
             MPI_UNSIGNED,
@@ -352,10 +349,9 @@ void Evolution::migrate()
   // Fill emigrant population
   mDeviceEmigrantsToReceive->copyToDevice(mHostEmigrantsToReceive->getHostData());
 
-
-  AcceptEmigrantsKernel<<<nBlocks, nThreads>>>
-                       (mMasterPopulation->getDeviceData(),
-                        mDeviceEmigrantsToReceive->getDeviceData(),
-                        getRandomSeed());
+  cudaAcceptEmigrants<<<nBlocks, nThreads>>>
+                     (mMasterPopulation->getDeviceData(),
+                      mDeviceEmigrantsToReceive->getDeviceData(),
+                      getRandomSeed());
 }// end of migrate
 //----------------------------------------------------------------------------------------------------------------------

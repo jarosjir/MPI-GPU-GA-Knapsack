@@ -1,7 +1,7 @@
-/*
- * File:        Population.cu
- * Author:      Jiri Jaros
- * Affiliation: Brno University of Technology
+/**
+ * @file        Population.cpp
+ * @author      Jiri Jaros
+ *              Brno University of Technology
  *              Faculty of Information Technology
  *
  *              and
@@ -9,24 +9,22 @@
  *              The Australian National University
  *              ANU College of Engineering & Computer Science
  *
- * Email:       jarosjir@fit.vutbr.cz
- * Web:         www.fit.vutbr.cz/~jarosjir
+ *              jarosjir@fit.vutbr.cz
+ *              www.fit.vutbr.cz/~jarosjir
  *
- * Comments:    Implementation file of the GA population
- *              This class maintains and GA populations
+ * @brief       Header file of the GA population.
+ *              This class maintains and GA populations.
  *
+ * @date        08 June      2012, 00:00 (created)
+ *              11 April     2022, 20:59 (revised)
  *
- * License:     This source code is distribute under OpenSource GNU GPL license
+ * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
- *              If using this code, please consider citation of related papers
- *              at http://www.fit.vutbr.cz/~jarosjir/pubs.php
+ * This source code is distribute under OpenSouce GNU GPL license.
+ * If using this code, please consider citation of related papers
+ * at http://www.fit.vutbr.cz/~jarosjir/pubs.php
  *
- *
- *
- * Created on 08 June     2012, 00:00 PM
- * Revised on 02 March    2022, 15:46 PM
  */
-
 
 #include <stdexcept>
 #include <helper_cuda.h>
@@ -64,7 +62,7 @@ GPUPopulation::GPUPopulation(const int populationSize,
 GPUPopulation::~GPUPopulation()
 {
   freeMemory();
-}// end of GPUPopulation
+}// end of ~GPUPopulation
 //----------------------------------------------------------------------------------------------------------------------
 
 /**
@@ -72,7 +70,7 @@ GPUPopulation::~GPUPopulation()
  * Both population must have the same size (sizes not being copied)!!
  *
  */
-void GPUPopulation::copyToDevice(const PopulationData * hostPopulation)
+void GPUPopulation::copyToDevice(const PopulationData* hostPopulation)
 {
   // Basic data check
   if (hostPopulation->chromosomeSize != mHostPopulationHandler.chromosomeSize)
@@ -104,7 +102,7 @@ void GPUPopulation::copyToDevice(const PopulationData * hostPopulation)
  * Copy data from GPU population structure to CPU
  * Both population must have the same size (sizes not copied)!!
  */
-void GPUPopulation::copyFromDevice (PopulationData * hostPopulation)
+void GPUPopulation::copyFromDevice(PopulationData* hostPopulation)
 {
   if (hostPopulation->chromosomeSize != mHostPopulationHandler.chromosomeSize)
   {
@@ -123,11 +121,11 @@ void GPUPopulation::copyFromDevice (PopulationData * hostPopulation)
                                  mHostPopulationHandler.populationSize,
                              cudaMemcpyDeviceToHost));
 
-    // Copy fitness values
-    checkCudaErrors(cudaMemcpy(hostPopulation->fitness,
-                               mHostPopulationHandler.fitness,
-                               sizeof(Fitness) * mHostPopulationHandler.populationSize,
-                               cudaMemcpyDeviceToHost));
+  // Copy fitness values
+  checkCudaErrors(cudaMemcpy(hostPopulation->fitness,
+                             mHostPopulationHandler.fitness,
+                             sizeof(Fitness) * mHostPopulationHandler.populationSize,
+                             cudaMemcpyDeviceToHost));
 }// end of copyFromDevice
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -165,7 +163,6 @@ void GPUPopulation::copyOnDevice(const GPUPopulation* sourceDevicePopulation)
 }// end of copyOnDevice
 //----------------------------------------------------------------------------------------------------------------------
 
-
 /**
  * Copy out only one individual
  *
@@ -196,12 +193,12 @@ void GPUPopulation::allocateMemory()
 
 
   // Allocate Population data
-  checkCudaErrors(cudaMalloc<Gene>(&mHostPopulationHandler.population,
+  checkCudaErrors(cudaMalloc<Gene>(&(mHostPopulationHandler.population),
                                    sizeof(Gene) * mHostPopulationHandler.chromosomeSize *
-                                       mHostPopulationHandler.populationSize));
+                                   mHostPopulationHandler.populationSize));
 
   // Allocate Fitness data
-  checkCudaErrors(cudaMalloc<Fitness>(&mHostPopulationHandler.fitness,
+  checkCudaErrors(cudaMalloc<Fitness>(&(mHostPopulationHandler.fitness),
                                       sizeof(Fitness) * mHostPopulationHandler.populationSize));
 
 
@@ -270,13 +267,13 @@ CPUPopulation::~CPUPopulation()
 void CPUPopulation::allocateMemory()
 {
   // Allocate Population on the host side
-  checkCudaErrors(cudaHostAlloc<Gene>(&mHostData->population,
+  checkCudaErrors(cudaHostAlloc<Gene>(&(mHostData->population),
                                       sizeof(Gene) * mHostData->chromosomeSize * mHostData->populationSize,
                                       cudaHostAllocDefault));
 
 
   // Allocate fitness on the host side
-  checkCudaErrors(cudaHostAlloc<Fitness>(&mHostData->fitness,
+  checkCudaErrors(cudaHostAlloc<Fitness>(&(mHostData->fitness),
                                          sizeof(Fitness) * mHostData->populationSize,
                                          cudaHostAllocDefault));
 

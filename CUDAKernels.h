@@ -1,7 +1,7 @@
-/*
- * File:        CUDAKernels.h
- * Author:      Jiri Jaros
- * Affiliation: Brno University of Technology
+/**
+ * @file        CUDAKernels.h
+ * @author      Jiri Jaros
+ *              Brno University of Technology
  *              Faculty of Information Technology
  *
  *              and
@@ -9,22 +9,21 @@
  *              The Australian National University
  *              ANU College of Engineering & Computer Science
  *
- * Email:       jarosjir@fit.vutbr.cz
- * Web:         www.fit.vutbr.cz/~jarosjir
+ *              jarosjir@fit.vutbr.cz
+ *              www.fit.vutbr.cz/~jarosjir
  *
- * Comments:    Header file of the GA evolution CUDA kernel
+ * @brief       Header file of the GA evolution CUDA kernel
  *              This class controls the evolution process on a single GPU
  *
+ * @date        08 June      2012, 00:00 (created)
+ *              11 April     2022, 21:03 (revised)
  *
- * License:     This source code is distribute under OpenSource GNU GPL license
+ * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
- *              If using this code, please consider citation of related papers
- *              at http://www.fit.vutbr.cz/~jarosjir/pubs.php
+ * This source code is distribute under OpenSouce GNU GPL license.
+ * If using this code, please consider citation of related papers
+ * at http://www.fit.vutbr.cz/~jarosjir/pubs.php
  *
- *
- *
- * Created on 08 June     2012, 00:00 PM
- * Revised on 22 February 2022, 12:00
  */
 
 #ifndef CUDA_KERNELS_H
@@ -41,42 +40,85 @@
  * @param [in] sourceLineNumber - Line where the error happened.
  */
 void checkAndReportCudaError(const char* sourceFileName,
-                             const int  sourceLineNumber);
+                             const int   sourceLineNumber);
 
 
-// First Population generation
-__global__ void FirstPopulationGenerationKernel(PopulationData * PopData, unsigned int RandomSeed);
+/**
+ * Generate first population
+ * @param [in, out] populationData - What population to generate.
+ * @param [in]      randomSeed     - Random seed for Random123 generator.
+ */
+__global__ void cudaGenerateFirstPopulation(PopulationData* populationData,
+                                            unsigned int    randomSeed);
 
-//Genetic Manipulation (Selection, Crossover, Mutation)
-__global__ void GeneticManipulationKernel(PopulationData * ParentsData, PopulationData * OffspringData, unsigned int RandomSeed);
-
-
-//Replacement
-__global__ void ReplacementKernel(PopulationData * ParentsData, PopulationData * OffspringData, unsigned int RandomSeed);
-
-
-// Calculate statistics
-__global__ void CalculateStatistics(StatisticsData * StatisticsData, PopulationData * PopData);
-
-// Select individuals to migration
-__global__ void SelectEmigrantsKernel(PopulationData * ParentsData, PopulationData * EmigrantsToSend, unsigned int RandomSeed);
-
-
-// Find the location of the best
-__device__ int FindTheBestLocation(int threadIdx1D, PopulationData * ParentsData);
-
-//accept emigrants
-__global__ void AcceptEmigrantsKernel(PopulationData * ParentsData, PopulationData *  EmigrantsToReceive, unsigned int RandomSeed);
+/**
+ * Genetic Manipulation (Selection, Crossover, Mutation).
+ *
+ * @param [in]  parentsData   - Parent population.
+ * @param [out] offspringData - Offspring population.
+ * @param [in]  randomSeed    - Random seed.
+ *
+ */
+__global__ void cudaGeneticManipulation(const PopulationData* parentsData,
+                                        PopulationData*       offspringData,
+                                        unsigned int          randomSeed);
 
 
-// Calculate OneMax Fitness
-__global__ void CalculateFintessOneMax(PopulationData * PopData);
+
+/**
+ * Replacement kernel.
+ *
+ * @param [in]  parentsData   - Parent population.
+ * @param [out] offspringData - Offspring population.
+ * @param [in]  randomSeed    - Random seed.
+ */
+__global__ void cudaReplacement(const PopulationData* parentsData,
+                                PopulationData*       offspringData,
+                                unsigned int          randomSeed);
 
 
-// Calculate Knapsack fitness
-__global__ void CalculateKnapsackFintess(PopulationData * PopData, KnapsackData * GlobalData);
+/**
+ * Calculate statistics kernel.
+ *
+ * @param [out] statisticsData  - Statistical data.
+ * @param [in]  populationData  - Population data.
+ *
+ */
+__global__ void cudaCalculateStatistics(StatisticsData*       statisticsData,
+                                        const PopulationData* populationData);
+
+/**
+ * Select individuals to migration.
+ * @param [in]  parentsData     - Parent population.
+ * @param [out] emigrantsToSend - Selected emigrants.
+ * @param [in]  randomSeed      - Random seed.
+ */
+__global__ void cudaSelectEmigrants(const PopulationData* parentsData,
+                                    PopulationData*       emigrantsToSend,
+                                    unsigned int          randomSeed);
 
 
+/**
+ * Accept emigrants into parent population.
+ * @param [in, out] parentsData       - Parent population.
+ * @param [in]      emigrantsToAccept - Received emigrants.
+ * @param [in]      randomSeed        - Random seed.
+ */
+ __global__ void cudaAcceptEmigrants(PopulationData*       parentsData,
+                                     const PopulationData* emigrantsToAccept,
+                                     unsigned int          randomSeed);
+
+/**
+ * Calculate Knapsack fitness.
+ *
+ * Each warp working with 1 32b gene. Different warps different individuals.
+ *
+ * @param [in,out] populationData - Population to be evaluated.
+ * @param [in]     globalData     - Global knapsack data.
+ *
+ */
+__global__ void cudaCalculateKnapsackFintess(PopulationData*     populationData,
+                                             const KnapsackData* globalData);
 
 #endif	/* CUDA_KERNELS_H */
 
