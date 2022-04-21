@@ -1,339 +1,366 @@
-/* 
- * File:        Parameters.cu
- * Author:      Jiri Jaros
- * Affiliation: Brno University of Technology
+/**
+ * @file        Parameters.cpp
+ * @author      Jiri Jaros
+ *              Brno University of Technology
  *              Faculty of Information Technology
- *              
+ *
  *              and
- * 
+ *
  *              The Australian National University
  *              ANU College of Engineering & Computer Science
  *
- * Email:       jarosjir@fit.vutbr.cz
- * Web:         www.fit.vutbr.cz/~jarosjir
- * 
- * Comments:    The implementation  parameter class. It contains all the parameters of
- *              GA and knapsack
- * 
- * 
- * License:     This source code is distribute under OpenSource GNU GPL license
- *                
- *              If using this code, please consider citation of related papers
- *              at http://www.fit.vutbr.cz/~jarosjir/pubs.php        
- *      
+ *              jarosjir@fit.vutbr.cz
+ *              www.fit.vutbr.cz/~jarosjir
  *
- * 
- * Created on 08 June 2012, 00:00 PM
+ * @brief       Header file of the parameter class.
+ *              This class maintains all the parameters of evolution.
+ *
+ * @date        30 March     2012, 00:00 (created)
+ *              25 February  2022, 20:01 (revised)
+ *
+ * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
+ *
+ * This source code is distribute under OpenSouce GNU GPL license.
+ * If using this code, please consider citation of related papers
+ * at http://www.fit.vutbr.cz/~jarosjir/pubs.php
+ *
  */
 
 
-#include <iostream>
-#include <cutil_inline.h>
-#include <cuda_runtime.h>
-#include <cutil.h>
 #include <mpi.h>
-
+#include <getopt.h>
+#include <helper_cuda.h>
 
 #include "Parameters.h"
+#include "CUDAKernels.h"
 
-//----------------------------------------------------------------------------//
-//                              Definitions                                   //
-//----------------------------------------------------------------------------//
+//--------------------------------------------------------------------------------------------------------------------//
+//--------------------------------------------------- Definitions ----------------------------------------------------//
+//--------------------------------------------------------------------------------------------------------------------//
+
+/// Copy of Evolutionary parameters in device constant memory.
+extern __constant__  EvolutionParameters gpuEvolutionParameters;
+
+// Singleton initialization
+bool Parameters::sInstanceFlag             = false;
+Parameters* Parameters::sSingletonInstance = nullptr;
 
 
-// Singleton initialization 
-bool TParameters::pTParametersInstanceFlag = false;
-TParameters* TParameters::pTParametersSingle = NULL;
+//--------------------------------------------------------------------------------------------------------------------//
+//------------------------------------------------- Public methods ---------------------------------------------------//
+//--------------------------------------------------------------------------------------------------------------------//
 
-
-//----------------------------------------------------------------------------//
-//                              Implementation                                //
-//                              public methods                                //
-//----------------------------------------------------------------------------//
-
-/*
- * Get instance of TPrarams
+/**
+ * Get instance of Parameters
  */
-TParameters* TParameters::GetInstance(){
-    if(! pTParametersInstanceFlag)
-    {        
-        pTParametersSingle = new TParameters();
-        pTParametersInstanceFlag = true;
-        return pTParametersSingle;
-    }
-    else
-    {
-        return pTParametersSingle;
-    }
-}// end of TParameters::GetInstance
-//-----------------------------------------------------------------------------
+Parameters& Parameters::getInstance()
+{
+  if(!sInstanceFlag)
+  {
+    sSingletonInstance = new Parameters();
+    sInstanceFlag = true;
+    return *sSingletonInstance;
+  }
+  else
+  {
+    return *sSingletonInstance;
+  }
+}// end of Parameters::getInstance
+//----------------------------------------------------------------------------------------------------------------------
 
-
-/*
+/**
  * Load parameters from command line
- * 
- * @param argc
- * @param argv
- * 
  */
-void TParameters::LoadParametersFromCommandLine(int argc, char **argv){
-    
-   
-   float OffspringPercentage = 0.5f;
-   float EmigrantPercentage = 0.1f;
-   char c;
+void Parameters::parseCommandline(int    argc,
+                                  char** argv)
+{
+  float offspringPercentage = 0.5f;
+  float emigrantPercentage = 0.1f;
+  char c;
 
-   
-  
-   while ((c = getopt (argc, argv, "p:g:m:c:o:e:n:f:s:bh")) != -1){
-       switch (c){
-          case 'p':{              
-              if (atoi(optarg) != 0) EvolutionParameters.PopulationSize = atoi(optarg);                           
-              break;
-          }
-          case 'g': {
-              if (atoi(optarg) != 0) EvolutionParameters.NumOfGenerations = atoi(optarg);
-              break;
-          }
-  
-          
-          case 'm': {
-              if (atof(optarg) != 0) EvolutionParameters.MutationPst = atof(optarg);              
-              break;
-          }
-          case 'c': {
-              if (atof(optarg) != 0) EvolutionParameters.CrossoverPst = atof(optarg);
-              break;
-          }
-          case 'o': {
-              if (atof(optarg) != 0) OffspringPercentage = atof(optarg);;
-              break;
-          }
-         
-                   
-         case 'e': {
-              if (atof(optarg) != 0) EmigrantPercentage = atof(optarg);;
-              break;
-          }
-          case 'n': {
-              if (atoi(optarg) != 0) EvolutionParameters.MigrationInterval = atoi(optarg);
-              break;
-          }
-          
-         case 's': {
-              if (atoi(optarg) != 0) EvolutionParameters.StatisticsInterval = atoi(optarg);
-              break;
-          }
+  while ((c = getopt (argc, argv, "p:g:m:c:o:e:n:f:s:bh")) != -1)
+  {
+    switch (c)
+    {
+      case 'p':
+      {
+        if (atoi(optarg) != 0)
+        {
+          mEvolutionParameters.populationSize = atoi(optarg);
+        }
+        break;
+      }
+      case 'g':
+      {
+        if (atoi(optarg) != 0)
+        {
+          mEvolutionParameters.numOfGenerations = atoi(optarg);
+        }
+        break;
+      }
+      case 'm':
+      {
+        if (atof(optarg) != 0)
+        {
+          mEvolutionParameters.mutationPst = atof(optarg);
+        }
+        break;
+      }
+     case 'c':
+     {
+        if (atof(optarg) != 0)
+        {
+          mEvolutionParameters.crossoverPst = atof(optarg);
+        }
+        break;
+      }
+      case 'o':
+      {
+        if (atof(optarg) != 0)
+        {
+          offspringPercentage = atof(optarg);
+        }
+        break;
+      }
+      case 'e':
+      {
+        if (atof(optarg) != 0)
+        {
+          emigrantPercentage = atof(optarg);
+        }
+        break;
+      }
+      case 'n':
+      {
+        if (atoi(optarg) != 0)
+        {
+          mEvolutionParameters.migrationInterval = atoi(optarg);
+        }
+        break;
+      }
+      case 's':
+      {
+        if (atoi(optarg) != 0)
+        {
+          mEvolutionParameters.statisticsInterval = atoi(optarg);
+        }
+        break;
+      }
+      case 'b':
+      {
+        mPrintBest = true;
+        break;
+      }
+      case 'f':
+      {
+        mGlobalDataFileName  = optarg;
+        break;
+      }
+      case 'h':
+      {
+        printUsageAndExit();
+        break;
+      }
+      default:
+      {
+        printUsageAndExit();
+      }
+    }
+  }
 
-         case 'b': {
-              FPrintBest = true;
-              break;
-          }
-          
-         case 'f': {
-              GlobalDataFileName  = optarg;              
-              break;
-          }
-          case 'h':{
+  // Set population size to be even.
+  if (mEvolutionParameters.populationSize % 2 == 1)
+  {
+    mEvolutionParameters.populationSize++;
+  }
 
-             PrintUsageAndExit();
-             break;        
-          }
-          default:{
+  mEvolutionParameters.offspringPopulationSize = (int) (offspringPercentage * mEvolutionParameters.populationSize);
+  if (mEvolutionParameters.offspringPopulationSize == 0)
+  {
+    mEvolutionParameters.offspringPopulationSize = 2;
+  }
+  if (mEvolutionParameters.offspringPopulationSize % 2 == 1)
+  {
+    mEvolutionParameters.offspringPopulationSize++;
+  }
 
-               PrintUsageAndExit();
-          }
-       }    
-   }   
-   
-   // Set population size to be even.   
-   if (EvolutionParameters.PopulationSize % 2 == 1) EvolutionParameters.PopulationSize++;
-   
-   EvolutionParameters.OffspringPopulationSize = (int) (OffspringPercentage * EvolutionParameters.PopulationSize);
-   if (EvolutionParameters.OffspringPopulationSize == 0) EvolutionParameters.OffspringPopulationSize = 2;
-   if (EvolutionParameters.OffspringPopulationSize % 2 == 1) EvolutionParameters.OffspringPopulationSize++;
-           
-     // Check emigrant count and set it at least to 1
-   EvolutionParameters.EmigrantCount = (int) (EmigrantPercentage * EvolutionParameters.PopulationSize);
-   if (EvolutionParameters.EmigrantCount == 0)  EvolutionParameters.EmigrantCount = 1;
-   if ((EvolutionParameters.EmigrantCount % 2) == 0) EvolutionParameters.EmigrantCount++;
-   
-   if (EvolutionParameters.EmigrantCount > EvolutionParameters.PopulationSize)  EvolutionParameters.EmigrantCount = EvolutionParameters.PopulationSize;
-   
-   if (EvolutionParameters.MigrationInterval < 0) EvolutionParameters.MigrationInterval = 1;
-   
-    // Set UINT mutation threshold to faster comparison  
-   EvolutionParameters.MutationUINTBoundary  = (unsigned int) ((float) UINT_MAX * EvolutionParameters.MutationPst);
-   EvolutionParameters.CrossoverUINTBoundary = (unsigned int) ((float) UINT_MAX * EvolutionParameters.CrossoverPst);
-   
-   
-   // Set island Idx and Island count
-   MPI_Comm_rank(MPI_COMM_WORLD, &EvolutionParameters.IslandIdx);
-   MPI_Comm_size(MPI_COMM_WORLD, &EvolutionParameters.IslandCount);
-      
-   SetGPU();
-   
-} // end of LoadParametersFromCommandLine
-//------------------------------------------------------------------------------
+  // Check emigrant count and set it at least to 1
+  mEvolutionParameters.emigrantCount = (int) (emigrantPercentage * mEvolutionParameters.populationSize);
+  if (mEvolutionParameters.emigrantCount == 0)
+  {
+    mEvolutionParameters.emigrantCount = 1;
+  }
+  if ((mEvolutionParameters.emigrantCount % 2) == 0)
+  {
+    mEvolutionParameters.emigrantCount++;
+  }
 
+  if (mEvolutionParameters.emigrantCount > mEvolutionParameters.populationSize)
+  {
+    mEvolutionParameters.emigrantCount = mEvolutionParameters.populationSize;
+  }
 
-/*
- * Copy parameters to the GPU constant memory
+  if (mEvolutionParameters.migrationInterval < 0)
+  {
+    mEvolutionParameters.migrationInterval = 1;
+  }
+
+  // Set UINT mutation threshold to faster comparison
+  mEvolutionParameters.mutationUintBoundary  = (unsigned int) ((float) UINT_MAX * mEvolutionParameters.mutationPst);
+  mEvolutionParameters.crossoverUintBoundary = (unsigned int) ((float) UINT_MAX * mEvolutionParameters.crossoverPst);
+
+  // Set island Idx and Island count
+  MPI_Comm_rank(MPI_COMM_WORLD, &mEvolutionParameters.islandIdx);
+  MPI_Comm_size(MPI_COMM_WORLD, &mEvolutionParameters.islandCount);
+
+  setDevice();
+} // end of parseCommandline
+//----------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Copy parameters to the GPU constant memory.
  */
-void TParameters::StoreParamsOnGPU(){
-    
-        
-    cutilSafeCall( 
-        cudaMemcpyToSymbol("GPU_EvolutionParameters", &EvolutionParameters, sizeof(TEvolutionParameters) )
-    );
+void Parameters::copyToDevice()
+{
+  checkCudaErrors(cudaMemcpyToSymbol(gpuEvolutionParameters, &mEvolutionParameters, sizeof(mEvolutionParameters)));
+}// end of copyToDevice
+//----------------------------------------------------------------------------------------------------------------------
 
-    
-    
-}// end of StoreParamsOnGPU
-//------------------------------------------------------------------------------
-
-
-/*
- * Return GPU id attached to the MPI process
+/**
+ * Set device idx attached to the MPI process.
  */
-void TParameters::SetGPU(){
-  
-    int DeviceCount = -1;
-    cutilSafeCall(cudaGetDeviceCount(&DeviceCount));
-    
-    // MPI processes are consecutive on the node. All nodes have to be equipped 
-    // with the same number of GPUs
-    FGPUIdx = EvolutionParameters.IslandIdx % DeviceCount;    
-    
-    cudaSetDevice(FGPUIdx);   
-    
-    cudaDeviceProp 	prop;	
-    cudaGetDeviceProperties (&prop, FGPUIdx);
-   
-    FGPU_SM_Count = prop.multiProcessorCount;
-        
-}// end of GetGPUIdx
-//------------------------------------------------------------------------------
+void Parameters::setDevice()
+{
+  // Get number of devices per node (must be uniform across nodes!)
+  int nDevices = -1;
+  checkCudaErrors(cudaGetDeviceCount(&nDevices));
+
+  // MPI processes are consecutive on the node. All nodes have to be equipped
+  // with the same number of GPUs
+  mDeviceIdx = mEvolutionParameters.islandIdx % nDevices;
+
+  checkCudaErrors(cudaSetDevice(mDeviceIdx));
 
 
-//----------------------------------------------------------------------------//
-//                              Implementation                                //
-//                              private methods                               //
-//----------------------------------------------------------------------------//
+  cudaDeviceProp 	prop;
+  checkCudaErrors(cudaGetDeviceProperties(&prop, mDeviceIdx));
 
-/*
+
+  mNumberOfDeviceSM = prop.multiProcessorCount;
+}// end of setDevice
+//----------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Print all parameters.
+ */
+void Parameters::printOutAllParameters()
+{
+  if (mEvolutionParameters.islandIdx == 0)
+  {
+    printf("-----------------------------------------\n");
+    printf("--- Evolution parameters --- \n");
+    printf("Population size:     %d\n", mEvolutionParameters.populationSize);
+    printf("Offspring size:      %d\n", mEvolutionParameters.offspringPopulationSize);
+    printf("Chromosome int size: %d\n", mEvolutionParameters.chromosomeSize);
+    printf("Chromosome size:     %d\n", mEvolutionParameters.chromosomeSize * mEvolutionParameters.intBlockSize);
+
+    printf("Num of generations:  %d\n", mEvolutionParameters.numOfGenerations);
+    printf("\n");
+
+
+    printf("Crossover pst:       %f\n", mEvolutionParameters.crossoverPst);
+    printf("Mutation  pst:       %f\n", mEvolutionParameters.mutationPst);
+    printf("Crossover int:       %u\n", mEvolutionParameters.crossoverUintBoundary);
+    printf("Mutation  int:       %u\n", mEvolutionParameters.mutationUintBoundary);
+    printf("\n");
+
+    printf("Emigrant count:      %d\n", mEvolutionParameters.emigrantCount);
+    printf("Migration interval:  %d\n", mEvolutionParameters.migrationInterval);
+    printf("Island count:        %d\n", mEvolutionParameters.islandCount);
+    printf("Statistics interval: %d\n", mEvolutionParameters.statisticsInterval);
+
+    printf("\n");
+    printf("Data File: %s\n",mGlobalDataFileName.c_str());
+    printf("-----------------------------------------\n");
+  }
+}// end of printOutAllParameters
+//----------------------------------------------------------------------------------------------------------------------
+
+
+//--------------------------------------------------------------------------------------------------------------------//
+//------------------------------------------------ Private methods ---------------------------------------------------//
+//--------------------------------------------------------------------------------------------------------------------//
+
+/**
  * Constructor of the class
  */
-TParameters::TParameters(){
-        
-    EvolutionParameters.PopulationSize      = 128;
-    EvolutionParameters.ChromosomeSize      = 128;
-    EvolutionParameters.NumOfGenerations    = 100;
-        
-    EvolutionParameters.MutationPst         = 0.01f;
-    EvolutionParameters.CrossoverPst        = 0.7f;    
-    EvolutionParameters.OffspringPopulationSize = (int) (0.5f * EvolutionParameters.PopulationSize);
-    
-    EvolutionParameters.IslandCount         = 1;
-    EvolutionParameters.EmigrantCount       = 1;
-    EvolutionParameters.MigrationInterval   = 1;
-    EvolutionParameters.StatisticsInterval  = 1;
-    
-    EvolutionParameters.IntBlockSize        = sizeof(int)*8;  
-    GlobalDataFileName                      = "";
-    
-    FPrintBest                              = false;
-    EvolutionParameters.IslandIdx           = 0;
-        
-}// end of TParameters
-//------------------------------------------------------------------------------
+Parameters::Parameters()
+{
+  mEvolutionParameters.populationSize      = 128;
+  mEvolutionParameters.chromosomeSize      = 128;
+  mEvolutionParameters.numOfGenerations    = 100;
 
-/*
+  mEvolutionParameters.mutationPst         = 0.01f;
+  mEvolutionParameters.crossoverPst        = 0.7f;
+  mEvolutionParameters.offspringPopulationSize = (int) (0.5f * mEvolutionParameters.populationSize);
+
+  mEvolutionParameters.islandCount         = 1;
+  mEvolutionParameters.emigrantCount       = 1;
+  mEvolutionParameters.migrationInterval   = 1;
+  mEvolutionParameters.statisticsInterval  = 1;
+
+  mEvolutionParameters.intBlockSize        = sizeof(int) * 8;
+  mGlobalDataFileName                      = "";
+
+  mPrintBest                              = false;
+  mEvolutionParameters.islandIdx           = 0;
+
+}// end of Parameters
+//----------------------------------------------------------------------------------------------------------------------
+
+/**
  * print usage of the algorithm
  */
-void TParameters::PrintUsageAndExit(){
-  
-  if (EvolutionParameters.IslandIdx == 0){
-      cerr << "Usage: " << endl;  
-      cerr << "  -p Population_size\n";
-      cerr << "  -g Number_of_generations\n";
-      cerr << endl;
+void Parameters::printUsageAndExit()
+{
+  if (mEvolutionParameters.islandIdx == 0)
+  {
+    fprintf(stderr, "Parameters for the genetic algorithm solving knapsack problem: \n");
+    fprintf(stderr, "  -p population_size\n");
+    fprintf(stderr, "  -g number_of_generations\n");
+    fprintf(stderr, "\n");
 
-      cerr << "  -m mutation_rate\n";
-      cerr << "  -c crossover_rate\n";
-      cerr << "  -o offspring_rate\n";
-      cerr << endl;
+    fprintf(stderr, "  -m mutation_rate\n");
+    fprintf(stderr, "  -c crossover_rate\n");
+    fprintf(stderr, "  -o offspring_rate\n");
+    fprintf(stderr, "\n");
 
-      cerr << "  -e emigrants_rate\n";
-      cerr << "  -n migration_interval\n";
-      cerr << "  -s statistics_interval\n";
-      cerr << endl;
+    fprintf(stderr, "  -e emigrants_rate\n");
+    fprintf(stderr, "  -n migration_interval\n");
+    fprintf(stderr, "  -s statistics_interval\n");
 
-      cerr << "  -b print best individual\n";
-      cerr << "  -f benchmark_file_name\n";
+    fprintf(stderr, "  -b print best individual\n");
+    fprintf(stderr, "  -f benchmark_file_name\n");
 
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Default population_size       = 128\n");
+    fprintf(stderr, "Default number_of_generations = 100\n");
+    fprintf(stderr, "\n");
 
-      cerr << endl;
-      cerr << "Default Population_size       = 128"  << endl;
-      cerr << "Default Number_of_generations = 100" << endl;
-      cerr << endl;
+    fprintf(stderr, "Default mutation_rate  = 0.01\n");
+    fprintf(stderr, "Default crossover_rate = 0.7\n");
+    fprintf(stderr, "Default offspring_rate = 0.5\n");
+    fprintf(stderr, "Default emigrants_rate = 0.1\n");
+    fprintf(stderr, "\n");
 
-      cerr << "Default mutation_rate  = 0.01" << endl;
-      cerr << "Default crossover_rate = 0.7" << endl;
-      cerr << "Default offspring_rate = 0.5" << endl;
-      cerr << endl;
+    fprintf(stderr, "Default island_count        = 1\n");
+    fprintf(stderr, "Default migration_interval  = 1\n");
+    fprintf(stderr, "Default statistics_interval = 1\n");
 
-      cerr << "Default island_count        = 1"   << endl;
-      cerr << "Default emigrants_rate      = 0.1" << endl;
-      cerr << "Default migration_interval  = 1"   << endl;
-      cerr << "Default statistics_interval = 1"   << endl;
-
-      cerr << "Default benchmark_file_name = knapsack_data.txt\n";
-
+    fprintf(stderr, "Default benchmark_file_name = knapsack_data.txt\n");
   }
+
   MPI_Finalize();
-  exit(1);
-    
-}// end of PrintUsage
-//------------------------------------------------------------------------------
-
-
-
-
-
-/*
- * Print all parameters
- * 
- */
-void TParameters::PrintAllParameters(){
-    
-    if (EvolutionParameters.IslandIdx == 0){
-        printf("-----------------------------------------\n");
-        printf("--- Evolution parameters --- \n");
-        printf("Population size:     %d\n", EvolutionParameters.PopulationSize);
-        printf("Offspring size:      %d\n", EvolutionParameters.OffspringPopulationSize);
-        printf("Chromosome int size: %d\n", EvolutionParameters.ChromosomeSize);
-        printf("Chromosome size:     %d\n", EvolutionParameters.ChromosomeSize * EvolutionParameters.IntBlockSize);
-
-        printf("Num of generations:  %d\n", EvolutionParameters.NumOfGenerations);
-        printf("\n");
-
-
-        printf("Crossover pst:       %f\n", EvolutionParameters.CrossoverPst);
-        printf("Mutation  pst:       %f\n", EvolutionParameters.MutationPst);
-        printf("Crossover int:       %u\n", EvolutionParameters.CrossoverUINTBoundary);    
-        printf("Mutation  int:       %u\n", EvolutionParameters.MutationUINTBoundary);    
-        printf("\n");
-
-        printf("Emigrant count:      %d\n", EvolutionParameters.EmigrantCount);
-        printf("Migration interval:  %d\n", EvolutionParameters.MigrationInterval);
-        printf("Island count:        %d\n", EvolutionParameters.IslandCount);    
-        printf("Statistics interval: %d\n", EvolutionParameters.StatisticsInterval);
-
-        printf("\n");
-        printf("Data File: %s\n",GlobalDataFileName.c_str());
-        printf("-----------------------------------------\n");
-    }
-    
-}// end of PrintAllParameters
-//------------------------------------------------------------------------------
+  exit(EXIT_FAILURE);
+}// end of printUsageAndExit
+//----------------------------------------------------------------------------------------------------------------------
