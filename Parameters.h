@@ -16,7 +16,7 @@
  *              This class maintains all the parameters of evolution.
  *
  * @date        30 March     2012, 00:00 (created)
- *              11 April     2022, 21:00 (revised)
+ *              21 April     2022, 10:37 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -99,8 +99,7 @@ class Parameters
     /// Prevent assignment.
     Parameters& operator=(const Parameters&) = delete;
 
-
-    // Destructor
+    // Destructor.
     virtual ~Parameters()
     {
       sInstanceFlag = false;
@@ -111,7 +110,7 @@ class Parameters
      * @param [in] argc
      * @param [in] argv
      */
-    void parseCommandline(int argc, char **argv);
+    void parseCommandline(int argc, char** argv);
 
     /// Store GA parameters in GPU constant memory.
     void copyToDevice();
@@ -144,7 +143,7 @@ class Parameters
     int  getEmigrantCount()                 const { return mEvolutionParameters.emigrantCount; };
     /// How often to migrate individuals.
     int  getMigrationInterval()             const { return mEvolutionParameters.migrationInterval; };
-    /// What  my island's Id.
+    /// What is my island Id.
     int  getIslandIdx()                     const { return mEvolutionParameters.islandIdx;};
     /// Get the number of islands.
     int  getIslandCount()                   const { return mEvolutionParameters.islandCount; };
@@ -172,7 +171,7 @@ class Parameters
     void printOutAllParameters();
 
   private:
-    /// Singleton constructor
+    /// Singleton constructor.
     Parameters();
 
     /// print error message end exit if parameters are wrong.
@@ -180,7 +179,7 @@ class Parameters
 
     /// Structure with evolutionary parameters (host copy).
     EvolutionParameters mEvolutionParameters;
-    /// Name of the file with global knapsack data
+    /// Name of the file with global knapsack data.
     std::string         mGlobalDataFileName;
 
     /// Number of SM processors on the device.

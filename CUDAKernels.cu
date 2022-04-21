@@ -16,7 +16,7 @@
  *              This class controls the evolution process on a single GPU
  *
  * @date        08 June      2012, 00:00 (created)
- *              11 April     2022, 12:19 (revised)
+ *              21 April     2022, 10:42 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -90,7 +90,7 @@ __device__ Semaphore vectorSemaphore[kMaxVectorSemaphores];
 
 
 /**
- * Generate two random numbers
+ * Generate two random numbers.
  * @param key     - Key for the random generator.
  * @param counter - Counter for the random generator.
  * @return        - Two random values.
@@ -170,7 +170,7 @@ inline __device__ void bitFlipMutation(Gene&        offspring1,
  * Find the location of the best individual.
  * @param [in] population  - population to search through.
  * @param [in] threadIdx1D - thread idx.
- * @return
+ * @return Index of the best individual in the population.
  */
  __device__ int findTheBestLocation(const PopulationData* population,
                                     int                   threadIdx1D);
@@ -371,11 +371,8 @@ void checkAndReportCudaError(const char* sourceFileName,
 }// end of checkAndReportCudaError
 //----------------------------------------------------------------------------------------------------------------------
 
-/*
- * Initialize Population before run
- * @params   Population
- * @params   RandomNumbers
- *
+/**
+ * Initialize Population before run.
  */
 __global__ void cudaGenerateFirstPopulation(PopulationData* populationData,
                                             unsigned int    randomSeed)
@@ -412,7 +409,6 @@ __global__ void cudaGenerateFirstPopulation(PopulationData* populationData,
 
 /**
  * Genetic Manipulation (Selection, Crossover, Mutation).
- *
  */
 __global__ void cudaGeneticManipulation(const PopulationData* parentsData,
                                         PopulationData*       offspringData,
@@ -498,7 +494,6 @@ __global__ void cudaGeneticManipulation(const PopulationData* parentsData,
 
 /**
  * Replacement kernel (Selection, Crossover, Mutation).
- *
  */
 __global__ void cudaReplacement(const PopulationData* parentsData,
                                 PopulationData*       offspringData,
@@ -547,7 +542,6 @@ __global__ void cudaReplacement(const PopulationData* parentsData,
 
 /**
  * Calculate statistics.
- *
  */
 __global__ void cudaCalculateStatistics(StatisticsData*       statisticsData,
                                         const PopulationData* populationData)
@@ -644,7 +638,6 @@ __global__ void cudaCalculateStatistics(StatisticsData*       statisticsData,
 
 /**
  * Calculate Knapsack fitness.
- *
  */
 __global__ void cudaCalculateKnapsackFintess(PopulationData*     populationData,
                                              const KnapsackData* globalData)
@@ -773,7 +766,7 @@ __global__ void cudaSelectEmigrants(const PopulationData* parentsData,
 
 
 /**
- * Accept emigrants (give them into population)
+ * Accept emigrants (give them into population).
  */
 __global__ void cudaAcceptEmigrants(PopulationData*        parentsData,
                                     const PopulationData*  emigrantsToAccept,

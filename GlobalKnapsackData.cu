@@ -1,7 +1,7 @@
-/*
- * File:        GlobalKnapsackData.cu
- * Author:      Jiri Jaros
- * Affiliation: Brno University of Technology
+/**
+ * @file        GlobalKnapsackData.cu
+ * @author      Jiri Jaros
+ *              Brno University of Technology
  *              Faculty of Information Technology
  *
  *              and
@@ -9,22 +9,22 @@
  *              The Australian National University
  *              ANU College of Engineering & Computer Science
  *
- * Email:       jarosjir@fit.vutbr.cz
- * Web:         www.fit.vutbr.cz/~jarosjir
+ *              jarosjir@fit.vutbr.cz
+ *              www.fit.vutbr.cz/~jarosjir
  *
- * Comments:    Implementation file of the knapsack global data class.
+ * @brief       Implementation file of the knapsack global data class.
+ *              Data resides in GPU memory
  *              This class maintains the benchmark data
  *
+ * @date        8 June 2012  2012, 00:00 (created)
+ *              21 April     2022, 10:37 (revised)
  *
- * License:     This source code is distribute under OpenSource GNU GPL license
+ * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
- *              If using this code, please consider citation of related papers
- *              at http://www.fit.vutbr.cz/~jarosjir/pubs.php
+ * This source code is distribute under OpenSouce GNU GPL license.
+ * If using this code, please consider citation of related papers
+ * at http://www.fit.vutbr.cz/~jarosjir/pubs.php
  *
- *
- *
- * Created on 08 June     2012, 00:00 PM
- * Revised on 24 February 2022, 18:59 PM
  */
 
 
@@ -38,7 +38,7 @@
 //--------------------------------------------------- Definitions ----------------------------------------------------//
 //--------------------------------------------------------------------------------------------------------------------//
 
-static const char* const ERROR_FILE_NOT_FOUND = "Global Benchmark Data: File not found\n";
+static const char* const ERROR_FILE_NOT_FOUND = "Global Benchmark Data: File not found.\n";
 
 
 //--------------------------------------------------------------------------------------------------------------------//
@@ -46,7 +46,7 @@ static const char* const ERROR_FILE_NOT_FOUND = "Global Benchmark Data: File not
 //--------------------------------------------------------------------------------------------------------------------//
 
 /**
- * Destructor of the class
+ * Destructor of the class.
  */
 GlobalKnapsackData::~GlobalKnapsackData()
 {
@@ -148,7 +148,7 @@ void GlobalKnapsackData::loadFromFile()
  */
 void GlobalKnapsackData::allocateMemory(int numberOfItems)
 {
-  //------------------------- Host allocation ------------------------------//
+  // Host allocation
   checkCudaErrors(
       cudaHostAlloc<KnapsackData>(&mHostData,  sizeof(KnapsackData), cudaHostAllocDefault)
   );
@@ -162,7 +162,7 @@ void GlobalKnapsackData::allocateMemory(int numberOfItems)
   );
 
 
-  //----------------------- Device allocation ------------------------------//
+  // Device allocation
   checkCudaErrors(
       cudaMalloc<KnapsackData>(&mDeviceData,  sizeof(KnapsackData) )
   );
@@ -182,17 +182,15 @@ void GlobalKnapsackData::allocateMemory(int numberOfItems)
  */
 void GlobalKnapsackData::freeMemory()
 {
+  // Host allocation
+  checkCudaErrors(cudaFreeHost(mHostData->itemPrice));
+  checkCudaErrors(cudaFreeHost(mHostData->itemWeight));
+  checkCudaErrors(cudaFreeHost(mHostData));
 
-    //------------------------- Host allocation ------------------------------//
-    checkCudaErrors(cudaFreeHost(mHostData->itemPrice));
-    checkCudaErrors(cudaFreeHost(mHostData->itemWeight));
-    checkCudaErrors(cudaFreeHost(mHostData));
-
-    //----------------------- Device allocation ------------------------------//
-    checkCudaErrors(cudaFree(mDeviceData));
-    checkCudaErrors(cudaFree(mDeviceItemPriceHandler));
-    checkCudaErrors(cudaFree(mDeviceItemWeightHandler));
-
+  // Device allocation
+  checkCudaErrors(cudaFree(mDeviceData));
+  checkCudaErrors(cudaFree(mDeviceItemPriceHandler));
+  checkCudaErrors(cudaFree(mDeviceItemWeightHandler));
 }// end of freeMemory
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -211,7 +209,7 @@ void GlobalKnapsackData::copyToDevice()
   );
 
 
-    // Set pointer of the ItemWeight vector into struct on GPU (link struct and vector)
+  // Set pointer of the ItemWeight vector into struct on GPU (link struct and vector)
   checkCudaErrors(
       cudaMemcpy(&(mDeviceData->itemWeight), &mDeviceItemWeightHandler, sizeof(WeightType*), cudaMemcpyHostToDevice)
   );

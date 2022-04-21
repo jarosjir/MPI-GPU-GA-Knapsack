@@ -350,6 +350,7 @@ void Parameters::printUsageAndExit()
     fprintf(stderr, "Default mutation_rate  = 0.01\n");
     fprintf(stderr, "Default crossover_rate = 0.7\n");
     fprintf(stderr, "Default offspring_rate = 0.5\n");
+    fprintf(stderr, "Default emigrants_rate = 0.1\n");
     fprintf(stderr, "\n");
 
     fprintf(stderr, "Default island_count        = 1\n");

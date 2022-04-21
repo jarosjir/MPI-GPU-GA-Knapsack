@@ -16,7 +16,7 @@
  *              This class maintains and GA populations.
  *
  * @date        08 June      2012, 00:00 (created)
- *              11 April     2022, 20:59 (revised)
+ *              21 April     2022, 10:24 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -57,7 +57,7 @@ GPUPopulation::GPUPopulation(const int populationSize,
 //----------------------------------------------------------------------------------------------------------------------
 
 /**
- * Destructor of the class
+ * Destructor of the class.
  */
 GPUPopulation::~GPUPopulation()
 {
@@ -66,8 +66,8 @@ GPUPopulation::~GPUPopulation()
 //----------------------------------------------------------------------------------------------------------------------
 
 /**
- * Copy data from CPU population structure to GPU
- * Both population must have the same size (sizes not being copied)!!
+ * Copy data from CPU population structure to GPU.
+ * Both populations must have the same size (sizes not being copied)!!
  *
  */
 void GPUPopulation::copyToDevice(const PopulationData* hostPopulation)
@@ -75,12 +75,12 @@ void GPUPopulation::copyToDevice(const PopulationData* hostPopulation)
   // Basic data check
   if (hostPopulation->chromosomeSize != mHostPopulationHandler.chromosomeSize)
   {
-    throw std::out_of_range("Wrong chromosome size in copyToDevice function");
+    throw std::out_of_range("Wrong chromosome size in copyToDevice function.");
   }
 
   if (hostPopulation->populationSize != mHostPopulationHandler.populationSize)
   {
-    throw std::out_of_range("Wrong population size in copyToDevice function");
+    throw std::out_of_range("Wrong population size in copyToDevice function.");
   }
 
   // Copy chromosomes
@@ -99,19 +99,19 @@ void GPUPopulation::copyToDevice(const PopulationData* hostPopulation)
 //----------------------------------------------------------------------------------------------------------------------
 
 /**
- * Copy data from GPU population structure to CPU
+ * Copy data from GPU population structure to CPU.
  * Both population must have the same size (sizes not copied)!!
  */
 void GPUPopulation::copyFromDevice(PopulationData* hostPopulation)
 {
   if (hostPopulation->chromosomeSize != mHostPopulationHandler.chromosomeSize)
   {
-    throw std::out_of_range("Wrong chromosome size in copyFromDevice function");
+    throw std::out_of_range("Wrong chromosome size in copyFromDevice function.");
   }
 
   if (hostPopulation->populationSize != mHostPopulationHandler.populationSize)
   {
-    throw std::out_of_range("Wrong population size in copyFromDevice function");
+    throw std::out_of_range("Wrong population size in copyFromDevice function.");
   }
 
   // Copy chromosomes
@@ -131,19 +131,19 @@ void GPUPopulation::copyFromDevice(PopulationData* hostPopulation)
 
 
 /**
- * Copy data from different population (both on the same GPU)
+ * Copy data from different population (both on the same GPU).
  * No size check!!!
  */
 void GPUPopulation::copyOnDevice(const GPUPopulation* sourceDevicePopulation)
 {
   if (sourceDevicePopulation->mHostPopulationHandler.chromosomeSize != mHostPopulationHandler.chromosomeSize)
   {
-    throw std::out_of_range("Wrong chromosome size in copyOnDevice function");
+    throw std::out_of_range("Wrong chromosome size in copyOnDevice function.");
   }
 
   if (sourceDevicePopulation->mHostPopulationHandler.populationSize != mHostPopulationHandler.populationSize)
   {
-    throw std::out_of_range("Wrong population size in copyOnDevice function");
+    throw std::out_of_range("Wrong population size in copyOnDevice function.");
   }
 
   // Copy chromosomes
@@ -231,7 +231,7 @@ void GPUPopulation::freeMemory()
 //--------------------------------------------------------------------------------------------------------------------//
 
 /**
- * Constructor of the class
+ * Constructor of the class.
  */
 CPUPopulation::CPUPopulation(const int populationSize,
                              const int chromosomeSize)
@@ -245,7 +245,7 @@ CPUPopulation::CPUPopulation(const int populationSize,
 //----------------------------------------------------------------------------------------------------------------------
 
 /**
- * Destructor of the class
+ * Destructor of the class.
  */
 CPUPopulation::~CPUPopulation()
 {
@@ -262,7 +262,7 @@ CPUPopulation::~CPUPopulation()
 //--------------------------------------------------------------------------------------------------------------------//
 
 /**
- * Allocate memory
+ * Allocate memory.
  */
 void CPUPopulation::allocateMemory()
 {
@@ -281,7 +281,7 @@ void CPUPopulation::allocateMemory()
 //----------------------------------------------------------------------------------------------------------------------
 
 /**
- * Free memory
+ * Free memory.
  */
 void CPUPopulation::freeMemory()
 {

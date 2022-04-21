@@ -16,7 +16,7 @@
  *              This class maintains and collects GA statistics
  *
  * @date        08 June      2012, 00:00 (created)
- *              11 April     2022, 20:52 (revised)
+ *              21 April     2022, 10:18 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -37,7 +37,7 @@
 
 /**
  * @struct StatisticsData
- * @brief  Statistics Structure
+ * @brief  Statistics Structure.
  */
 struct StatisticsData
 {
@@ -87,12 +87,12 @@ class Statistics
     Statistics& operator=(const Statistics&) = delete;
 
     /**
-     * Calculate statistics
+     * Calculate statistics.
      * @param [in] population - Population to calculate statistics of.
-     * @param [in] printBest  - do we need to download the best individual to print.
+     * @param [in] printBest  - Do we need to download the best individual to print.
      */
-    void   calculate(GPUPopulation* population,
-                     bool           printBest);
+    void calculate(GPUPopulation* population,
+                   bool           printBest);
 
     /**
      * Get best individual in text form.
@@ -104,15 +104,15 @@ class Statistics
 
     //-------------------------------------------- Getters for root rank ---------------------------------------------//
     /// Get minimum fitness.
-    Fitness getMinFitness()     const {return mHostStatData->minFitness;};
+    Fitness getMinFitness()     const { return mHostStatData->minFitness; };
     /// Get maximum fitness.
-    Fitness getMaxFitness()     const {return mHostStatData->maxFitness;};
+    Fitness getMaxFitness()     const { return mHostStatData->maxFitness; };
     /// Get average fitness.
-    float    getAvgFitness()    const {return mGlobalDerivedStat->avgFitness;};
+    float    getAvgFitness()    const { return mGlobalDerivedStat->avgFitness; };
     /// Get divergence.
-    float    getDivergence()    const {return mGlobalDerivedStat->divergence;};
+    float    getDivergence()    const { return mGlobalDerivedStat->divergence; };
     /// Get best Island id.
-    int      getBestIslandIdx() const {return mGlobalDerivedStat->bestIslandIdx;};
+    int      getBestIslandIdx() const { return mGlobalDerivedStat->bestIslandIdx; };
 
   protected:
     /// Allocate memory on device side.

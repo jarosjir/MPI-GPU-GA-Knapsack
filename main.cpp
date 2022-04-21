@@ -16,7 +16,7 @@
  *              Genetic Algorithm, solving the Knapsack problem.
  *
  * @date        08 June      2012, 00:00 (created)
- *              11 April     2022, 17:51 (revised)
+ *              21 April     2022, 10:12 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -36,7 +36,7 @@
 /**
  * The main function
  */
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
   // Initialize MPI
   MPI_Init(&argc, &argv);

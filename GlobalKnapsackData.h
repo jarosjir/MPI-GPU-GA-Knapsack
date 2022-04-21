@@ -17,7 +17,7 @@
  *              This class maintains the benchmark data
  *
  * @date        8 June 2012  2012, 00:00 (created)
- *              24 February  2022, 18:40 (revised)
+ *              21 April     2022, 10:37 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -39,7 +39,7 @@ using WeightType = int;
 
 /**
  * @struct KnapsackData
- * @brief  Global knapsack data structure accessible form CUDA kernels
+ * @brief  Global knapsack data structure accessible form CUDA kernels.
  */
 struct KnapsackData
 {
@@ -70,7 +70,7 @@ class GlobalKnapsackData
     GlobalKnapsackData() : mDeviceData(nullptr), mHostData(nullptr), mDeviceItemPriceHandler(nullptr),
                            mDeviceItemWeightHandler(nullptr) {};
 
-    // Destructor of the class
+    // Destructor of the class.
     virtual ~GlobalKnapsackData();
 
     /// Get knapsack data on device.

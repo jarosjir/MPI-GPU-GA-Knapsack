@@ -16,7 +16,7 @@
  *              This class maintains and GA populations.
  *
  * @date        08 June      2012, 00:00 (created)
- *              02 March     2022, 14:14 (revised)
+ *              21 April     2022, 10:22 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -31,7 +31,6 @@
 
 #include <string>
 
-// Basic types
 /// Data type for Gene.
 using Gene    = unsigned int;
 /// Data type for fitness value
@@ -39,7 +38,7 @@ using Fitness = float;
 
 /**
  * @struct PopulationData
- * @brief CPU version of GA Population
+ * @brief CPU version of GA Population.
  */
 struct PopulationData
 {
@@ -77,7 +76,7 @@ class GPUPopulation
     /// Destructor
     virtual ~GPUPopulation();
 
-    /// Assignment operator not allowed
+    /// Assignment operator not allowed.
     GPUPopulation& operator=(const GPUPopulation&) = delete;
 
 
@@ -88,20 +87,20 @@ class GPUPopulation
 
     /**
      * @brief Copy data from CPU population structure to GPU.
-     * Both population must have the same size (sizes not being copied)!!
+     * Both populations must have the same size (sizes not being copied)!!
      *
      * @param [in] hostPopulation - Source of population data on the host side.
     */
     void copyToDevice(const PopulationData* hostPopulation);
     /**
      * @brief Copy data from GPU population structure to CPU.
-     * Both population must have the same size (sizes not copied)!!
+     * Both populations must have the same size (sizes not copied)!!
      *
      * @param [out] hostPopulation - Source of population data on the host side
      */
     void copyFromDevice(PopulationData* hostPopulation);
     /**
-     * @brief Copy data from different population (both on the same GPU)
+     * @brief Copy data from different population (both on the same GPU).
      * No size check!!!
      *
      * @param [in] sourceDevicePopulation - Source population.
@@ -109,9 +108,9 @@ class GPUPopulation
     void copyOnDevice(const GPUPopulation* sourceDevicePopulation);
 
     /**
-     * Copy a given individual from device to host
+     * Copy a given individual from device to host.
      * @param [out] individual - Where to store an individual.
-     * @param [in]  index      - Index of the individual in device population
+     * @param [in]  index      - Index of the individual in device population.
      */
     void copyIndividualFromDevice(Gene* individual,
                                   int   index);

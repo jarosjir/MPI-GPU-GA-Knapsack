@@ -16,7 +16,7 @@
  *              This class controls the evolution process on multiple GPUs across many nodes.
  *
  * @date        08 June      2012, 00:00 (created)
- *              11 April     2022, 21:01 (revised)
+ *              21 April     2022, 10:13 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -43,14 +43,14 @@
 class Evolution
 {
   public:
-    /// Class constructors
+    /// Default constructor not allowed.
     Evolution() = delete;
     /**
      * Constructor commandline parameters.
-     * @param [in] argc - Argument counts
+     * @param [in] argc - Argument counts.
      * @param [in] argv - Commandline arguments.
      */
-    Evolution(int argc, char **argv);
+    Evolution(int argc, char** argv);
 
     /// Copy constructor not allowed.
     Evolution(const Evolution&) = delete;
@@ -80,29 +80,29 @@ class Evolution
     void         migrate();
 
     /// Parameters of evolution.
-    Parameters&   mParams;
+    Parameters&  mParams;
     /// Actual generation.
     int           mActGeneration;
     /// Random Seed.
-    unsigned int  mRandomSeed;
+    unsigned int mRandomSeed;
 
     /// Master GA population.
-    GPUPopulation*     mMasterPopulation;
+    GPUPopulation*    mMasterPopulation;
     /// Population of offsprings.
-    GPUPopulation*     mOffspringPopulation;
+    GPUPopulation*    mOffspringPopulation;
 
     /// Emigrants to send.
-    GPUPopulation*     mDeviceEmigrantsToSend;
+    GPUPopulation*    mDeviceEmigrantsToSend;
     /// Emigrants to receive.
-    GPUPopulation*     mDeviceEmigrantsToReceive;
+    GPUPopulation*    mDeviceEmigrantsToReceive;
 
     /// Buffer for individuals to send.
-    CPUPopulation*     mHostEmigrantsToSend;
+    CPUPopulation*    mHostEmigrantsToSend;
     /// Buffer for individuals to receive.
-    CPUPopulation*     mHostEmigrantsToReceive;
+    CPUPopulation*    mHostEmigrantsToReceive;
 
     /// Statistics over GA process.
-    Statistics*        mStatistics;
+    Statistics*       mStatistics;
 
     /// Global data of knapsack.
     GlobalKnapsackData mGlobalData;

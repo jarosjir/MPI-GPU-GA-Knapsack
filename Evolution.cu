@@ -16,7 +16,7 @@
  *              This class controls the evolution process on multiple GPUs across many nodes.
  *
  * @date        08 June      2012, 00:00 (created)
- *              11 April     2022, 21:02 (revised)
+ *              21 April     2022, 11:17 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -151,7 +151,7 @@ void Evolution::initialize()
   dim3 nBlocks;
 
   nBlocks.x = 1;
-  nBlocks.y = (mParams.getPopulationSize() / (CHR_PER_BLOCK) +1);
+  nBlocks.y = (mParams.getPopulationSize() / (CHR_PER_BLOCK) + 1);
   nBlocks.z = 1;
 
   dim3 nThreads;
@@ -159,10 +159,10 @@ void Evolution::initialize()
   nThreads.y = CHR_PER_BLOCK;
   nThreads.z = 1;
 
-
- cudaCalculateKnapsackFintess<<<nBlocks, nThreads>>>
-                             (mMasterPopulation->getDeviceData(),
-                             mGlobalData.getDeviceData());
+  // Evaluate first population
+  cudaCalculateKnapsackFintess<<<nBlocks, nThreads>>>
+                              (mMasterPopulation->getDeviceData(),
+                               mGlobalData.getDeviceData());
 }// end of initialize
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -190,9 +190,9 @@ void Evolution::runEvolutionCycle()
 
     //  Selection
     nBlocks.x = 1;
-    nBlocks.y = (mParams.getOffspringPopulationSize() % (CHR_PER_BLOCK << 1)  == 0) ?
-                    mParams.getOffspringPopulationSize() / (CHR_PER_BLOCK << 1)  :
-                    mParams.getOffspringPopulationSize() / (CHR_PER_BLOCK << 1) + 1;
+    nBlocks.y = (mParams.getOffspringPopulationSize() % (CHR_PER_BLOCK << 1)  == 0)
+                    ? mParams.getOffspringPopulationSize() / (CHR_PER_BLOCK << 1)
+                    : mParams.getOffspringPopulationSize() / (CHR_PER_BLOCK << 1) + 1;
     nBlocks.z = 1;
 
     cudaGeneticManipulation<<<nBlocks, nThreads>>>
@@ -203,9 +203,9 @@ void Evolution::runEvolutionCycle()
     // Evaluation
 
     nBlocks.x = 1;
-    nBlocks.y = (mParams.getOffspringPopulationSize() % (CHR_PER_BLOCK)  == 0) ?
-                    mParams.getOffspringPopulationSize() / (CHR_PER_BLOCK)  :
-                    mParams.getOffspringPopulationSize() / (CHR_PER_BLOCK) + 1;
+    nBlocks.y = (mParams.getOffspringPopulationSize() % (CHR_PER_BLOCK)  == 0)
+                    ? mParams.getOffspringPopulationSize() / (CHR_PER_BLOCK)
+                    : mParams.getOffspringPopulationSize() / (CHR_PER_BLOCK) + 1;
     nBlocks.z = 1;
 
     cudaCalculateKnapsackFintess<<<nBlocks, nThreads>>>
@@ -215,9 +215,9 @@ void Evolution::runEvolutionCycle()
 
     // Replacement
     nBlocks.x = 1;
-    nBlocks.y = (mParams.getPopulationSize() % (CHR_PER_BLOCK)  == 0) ?
-                     mParams.getPopulationSize() / (CHR_PER_BLOCK)  :
-                     mParams.getPopulationSize() / (CHR_PER_BLOCK) + 1;
+    nBlocks.y = (mParams.getPopulationSize() % (CHR_PER_BLOCK)  == 0)
+                    ? mParams.getPopulationSize() / (CHR_PER_BLOCK)
+                    : mParams.getPopulationSize() / (CHR_PER_BLOCK) + 1;
     nBlocks.z = 1;
 
     cudaReplacement<<<nBlocks, nThreads>>>
@@ -244,7 +244,7 @@ void Evolution::runEvolutionCycle()
           printf("%s\n", mStatistics->getBestIndividualStr(mGlobalData.getHostData()).c_str());
         }
       }// isMaster
-    } // print stat
+    } // Print stats
     /// Check error per generation
     checkAndReportCudaError(__FILE__,__LINE__);
   }// generations
@@ -278,15 +278,11 @@ void Evolution::migrate()
   MPI_Status  status [nMessages];
   MPI_Request request[nMessages];
 
-  int mpiTarget;
-  int mpiSource;
-
   // Send to the right
-  mpiTarget = (mParams.getIslandIdx() + 1) % mParams.getIslandCount();
+  const int mpiTarget = (mParams.getIslandIdx() + 1) % mParams.getIslandCount();
 
   // Send to the left
-  mpiSource = (mParams.getIslandIdx() == 0) ? mpiSource = mParams.getIslandCount() - 1
-                                            : mpiSource = mParams.getIslandIdx() - 1;
+  const int mpiSource = (mParams.getIslandIdx() == 0) ? mParams.getIslandCount() - 1 : mParams.getIslandIdx() - 1;
 
 
   // Receive fitness values and immigrants
@@ -312,9 +308,9 @@ void Evolution::migrate()
   nThreads.z = 1;
 
   nBlocks.x  = 1;
-  nBlocks.y  = (mParams.getEmigrantCount() % CHR_PER_BLOCK  == 0) ?
-                   mParams.getEmigrantCount() / CHR_PER_BLOCK :
-                   mParams.getEmigrantCount() / CHR_PER_BLOCK  + 1;
+  nBlocks.y  = (mParams.getEmigrantCount() % CHR_PER_BLOCK  == 0)
+                   ? mParams.getEmigrantCount() / CHR_PER_BLOCK
+                   : mParams.getEmigrantCount() / CHR_PER_BLOCK  + 1;
   nBlocks.z  = 1;
 
 

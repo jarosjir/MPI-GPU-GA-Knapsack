@@ -16,7 +16,7 @@
  *              This class maintains and collects GA statistics
  *
  * @date        08 June 2012 2012, 00:00 (created)
- *              11 April     2022, 20:57 (revised)
+ *              21 April     2022, 10:18 (revised)
  *
  * @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
  *
@@ -45,7 +45,7 @@
 
 
 /**
- * Constructor of the class
+ * Constructor of the class.
  */
 Statistics::Statistics()
 {
@@ -55,13 +55,13 @@ Statistics::Statistics()
   mReceiveStatDataBuffer   = nullptr;
   mReceiveIndividualBuffer = nullptr;
 
- // for MPI collection function
+  // for MPI collection function
   if (Params.getIslandIdx() == 0)
   {
     mGlobalDerivedStat       = (DerivedStats *)   memalign(64, sizeof(DerivedStats));
     mReceiveStatDataBuffer   = (StatisticsData *) memalign(64, sizeof(StatisticsData) * Params.getIslandCount());
     mReceiveIndividualBuffer = (Gene *)           memalign(64, sizeof(Gene)
-                                                                * Params.getChromosomeSize()* Params.getIslandCount());
+                                                                * Params.getChromosomeSize() * Params.getIslandCount());
   }
 
   // Allocate CUDA memory
@@ -151,7 +151,7 @@ void Statistics::calculate(GPUPopulation* population,
   const Parameters& params = Parameters::getInstance();
 
   // Calculate local statistics
-  calculateLocalStats(population,  printBest);
+  calculateLocalStats(population, printBest);
 
   // Collect statistics data
   MPI_Gather(mHostStatData         , sizeof(StatisticsData), MPI_BYTE,
@@ -179,14 +179,12 @@ void Statistics::calculate(GPUPopulation* population,
 //--------------------------------------------------------------------------------------------------------------------//
 
 /**
- * Allocate GPU memory
+ * Allocate GPU memory.
  */
 void Statistics::allocateCudaMemory()
 {
-  // Host data
-
   // Allocate Host basic structure
-  checkCudaErrors(cudaHostAlloc<StatisticsData>(&mHostStatData,  sizeof(StatisticsData),cudaHostAllocDefault));
+  checkCudaErrors(cudaHostAlloc<StatisticsData>(&mHostStatData,  sizeof(StatisticsData), cudaHostAllocDefault));
 
   // Allocate Host basic structure
   checkCudaErrors(cudaHostAlloc<Gene>(&mLocalBestIndividual,
@@ -199,7 +197,7 @@ void Statistics::allocateCudaMemory()
 //----------------------------------------------------------------------------------------------------------------------
 
 /**
- * Free GPU memory
+ * Free GPU memory.
  */
 void Statistics::freeCudaMemory()
 {
@@ -225,7 +223,7 @@ void Statistics::initStatistics()
   mHostStatData->sum2Fitness = 0.0f;
   mHostStatData->indexBest   = 0;
 
-  //  Copy 4 statistics values
+  // Copy 4 statistics values
   checkCudaErrors(cudaMemcpy(mLocalDeviceStatData, mHostStatData, sizeof(StatisticsData), cudaMemcpyHostToDevice));
 }// end of initStatistics
 //----------------------------------------------------------------------------------------------------------------------
@@ -253,7 +251,7 @@ void Statistics::calculateLocalStats(GPUPopulation* population,
  * Copy data from GPU Statistics structure to CPU.
  */
 void Statistics::copyFromDevice(GPUPopulation* population,
-                                bool             printBest)
+                                bool           printBest)
 {
   // Copy 4 statistics values
   checkCudaErrors(cudaMemcpy(mHostStatData, mLocalDeviceStatData, sizeof(StatisticsData), cudaMemcpyDeviceToHost));
@@ -267,7 +265,7 @@ void Statistics::copyFromDevice(GPUPopulation* population,
 //----------------------------------------------------------------------------------------------------------------------
 
 /**
- * Summarize statistics Local statistics to global
+ * Summarize statistics Local statistics to global.
  */
 void Statistics::calculateGlobalStatistics(bool printBest)
 {

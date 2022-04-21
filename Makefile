@@ -16,7 +16,7 @@
 #              This class maintains the benchmark data
 #
 # @date        08 June      2012, 00:00 (created)
-#              11 April     2022, 21:10 (revised)
+#              21 April     2022, 17:19 (revised)
 #
 # @copyright   Copyright (C) 2012 - 2022 Jiri Jaros.
 #
@@ -51,7 +51,7 @@ TARGET=mpi_gpuga_knapsack
 
 #---------------------------------------------------------------------
 # CHECK FLAGS FOR MPI
-LDFLAGS= -L${EBROOTOPENMPI} -lmpi -lmpi_cxx
+LDFLAGS= -L${EBROOTOPENMPI} -lmpi
 #-----------------------------------------------------------------------
 
 #----------------------------------------------------------------
